@@ -1,0 +1,165 @@
+---
+// About and Find used to be two windows holding half a thought each. They're
+// one page now: who this is, then how to reach her.
+//
+// None of the copy lives here any more — it's in src/content/pages/about.md,
+// so the bio, the address and the link list can be edited in the CMS like any
+// work. The link labels keep the source site's bracketed style ("< Instagram >",
+// angle brackets and all), which is the one bit of its voice worth carrying
+// over, and that style now lives in the content rather than in this file.
+import { getEntry, render } from 'astro:content';
+
+const about = await getEntry('pages', 'about');
+if (!about) throw new Error('src/content/pages/about.md is missing');
+
+const { tagline, title, emailLabel, email, linksLabel, links, signoff } = about.data;
+const { Content } = await render(about);
+---
+
+<article class="panel">
+	<header class="head">
+		<p class="tagline">{tagline}</p>
+		<h1>{title}</h1>
+	</header>
+
+	<div class="intro">
+		<Content />
+	</div>
+
+	<section class="reach" aria-label="Email">
+		<h2 class="label">{emailLabel}</h2>
+		<a class="email organic-2" href={`mailto:${email}`}>{email}</a>
+	</section>
+
+	<section class="elsewhere" aria-label="Elsewhere">
+		<h2 class="label">{linksLabel}</h2>
+		<ul>
+			{
+				links.map(({ label, href }) => (
+					<li>
+						<a href={href} target="_blank" rel="noopener noreferrer">
+							{label}
+						</a>
+					</li>
+				))
+			}
+		</ul>
+	</section>
+
+	<p class="signoff">{signoff}</p>
+</article>
+
+<style>
+	.panel {
+		max-width: 52ch;
+	}
+
+	.head {
+		padding: 2.5rem 0 1.6rem;
+	}
+	.tagline {
+		margin: 0 0 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.58rem;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--muted);
+		opacity: 0.8;
+	}
+	h1 {
+		margin: 0;
+		font-size: 2.4rem;
+		line-height: 1.02;
+		letter-spacing: -0.015em;
+	}
+
+	.intro {
+		padding-bottom: 1.6rem;
+		border-bottom: 1px solid var(--rule);
+	}
+	/* The paragraphs come from rendered markdown, so they aren't in this
+	   component's scope and have to be reached through :global(). */
+	.intro :global(p) {
+		margin: 0 0 1rem;
+		font-size: 1rem;
+		line-height: 1.6;
+	}
+	.intro :global(p:last-child) {
+		margin-bottom: 0;
+		color: var(--muted);
+	}
+
+	.label {
+		margin: 2.2rem 0 0.9rem;
+		font-family: var(--font-mono);
+		font-size: 0.58rem;
+		font-weight: 400;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--muted);
+	}
+
+	/* One address, given the room that implies. */
+	.email {
+		--o: 10px;
+		display: inline-block;
+		padding: 0.6rem 1rem;
+		border: 1px solid var(--accent);
+		font-family: var(--font-mono);
+		font-size: 0.92rem;
+		letter-spacing: 0.02em;
+		color: var(--accent);
+		text-decoration: none;
+		transition:
+			background 0.2s ease,
+			color 0.2s ease;
+	}
+	.email:hover,
+	.email:focus-visible {
+		background: var(--accent);
+		color: var(--bg);
+	}
+
+	/* Smaller than the address, as asked — these are the side doors. */
+	.elsewhere ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+	}
+	.elsewhere li {
+		border-bottom: 1px dotted var(--rule);
+	}
+	.elsewhere a {
+		display: block;
+		padding: 0.5rem 0;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.04em;
+		color: var(--fg);
+		text-decoration: none;
+		transition:
+			padding-left 0.18s ease,
+			color 0.18s ease;
+	}
+	.elsewhere a:hover,
+	.elsewhere a:focus-visible {
+		padding-left: 0.5rem;
+		color: var(--accent);
+	}
+
+	.signoff {
+		margin: 2.4rem 0 0;
+		font-size: 0.88rem;
+		color: var(--muted);
+		font-style: italic;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.email,
+		.elsewhere a {
+			transition: none;
+		}
+	}
+</style>

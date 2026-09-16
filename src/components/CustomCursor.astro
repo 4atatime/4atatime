@@ -1,0 +1,199 @@
+---
+// Latitude/longitude crosshair in place of a pointer: two hairlines spanning
+// the viewport, a small gap where they'd cross, and a coordinate readout that
+// maps the viewport onto a globe (left→right = 180°W→180°E, top→bottom =
+// 90°N→90°S). Reads as a map reticle over the graph, which is the point.
+//
+// It is the *graph's* cursor, not the site's. A detail panel is a document,
+// so the moment the pointer crosses into one the reticle is dropped and the
+// real cursor comes back (global.css puts it back on #detail-window). The two
+// kinds of surface are told apart by one test — is the pointer inside the
+// panel — rather than by tracking which panel is open.
+//
+// html{cursor:none} lives in global.css with a (hover:none) escape hatch, so
+// on touch devices the real cursor stays and this component never renders.
+---
+
+<div id="cursor" class="cursor" aria-hidden="true">
+	<span class="line line-x"></span>
+	<span class="line line-y"></span>
+	<span class="reticle"></span>
+	<span id="cursor-readout" class="readout"></span>
+</div>
+
+<style>
+	.cursor {
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		z-index: 9999;
+		opacity: 0;
+		transition: opacity 0.25s ease;
+	}
+	.cursor.visible {
+		opacity: 1;
+	}
+
+	.line {
+		position: absolute;
+		background: var(--fg);
+		opacity: 0.28;
+	}
+	/* Split each hairline either side of a centre gap so the two never quite
+	   touch — a solid intersection reads as a heavy plus sign. */
+	.line-x {
+		left: 0;
+		width: 100%;
+		height: 1px;
+		top: 0;
+		transform: translateY(var(--cursor-y, -100px));
+		clip-path: polygon(
+			0 0,
+			calc(var(--cursor-x, -100px) - 9px) 0,
+			calc(var(--cursor-x, -100px) - 9px) 100%,
+			0 100%,
+			0 0,
+			calc(var(--cursor-x, -100px) + 9px) 0,
+			100% 0,
+			100% 100%,
+			calc(var(--cursor-x, -100px) + 9px) 100%
+		);
+	}
+	.line-y {
+		top: 0;
+		height: 100%;
+		width: 1px;
+		left: 0;
+		transform: translateX(var(--cursor-x, -100px));
+		clip-path: polygon(
+			0 0,
+			100% 0,
+			100% calc(var(--cursor-y, -100px) - 9px),
+			0 calc(var(--cursor-y, -100px) - 9px),
+			0 calc(var(--cursor-y, -100px) + 9px),
+			100% calc(var(--cursor-y, -100px) + 9px),
+			100% 100%,
+			0 100%
+		);
+	}
+
+	.reticle {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 5px;
+		height: 5px;
+		margin: -3px 0 0 -3px;
+		border: 1px solid var(--fg);
+		border-radius: 50%;
+		opacity: 0.5;
+		transform: translate(var(--cursor-x, -100px), var(--cursor-y, -100px));
+		transition: opacity 0.15s ease;
+	}
+
+	.readout {
+		position: absolute;
+		top: 0;
+		left: 0;
+		transform: translate(var(--cursor-x, -100px), var(--cursor-y, -100px))
+			translate(14px, 10px);
+		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		font-size: 10px;
+		line-height: 1;
+		letter-spacing: 0.06em;
+		color: var(--muted);
+		white-space: nowrap;
+	}
+
+	/* Over something clickable the reticle opens up — the only cursor state
+	   change, since the hairlines are already doing the aiming. */
+	:global(html.cursor-active) .reticle {
+		width: 13px;
+		height: 13px;
+		margin: -7px 0 0 -7px;
+		opacity: 1;
+		border-color: var(--accent);
+	}
+
+	@media (hover: none) {
+		.cursor {
+			display: none;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.cursor {
+			transition: none;
+		}
+	}
+</style>
+
+<script>
+	const cursor = document.getElementById('cursor');
+	const readout = document.getElementById('cursor-readout');
+
+	if (cursor && readout && window.matchMedia('(hover: hover)').matches) {
+		const root = document.documentElement;
+		let frame = 0;
+		let x = 0;
+		let y = 0;
+
+		function render() {
+			frame = 0;
+			cursor!.style.setProperty('--cursor-x', `${x}px`);
+			cursor!.style.setProperty('--cursor-y', `${y}px`);
+
+			const lon = (x / window.innerWidth) * 360 - 180;
+			const lat = 90 - (y / window.innerHeight) * 180;
+			readout!.textContent = `${Math.abs(lat).toFixed(1)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon).toFixed(1)}°${lon >= 0 ? 'E' : 'W'}`;
+		}
+
+		const panel = document.getElementById('detail-window');
+
+		/** True while the pointer is over the open detail panel. */
+		function overPanel(event: Event) {
+			return !!panel && !panel.hidden && panel.contains(event.target as Node);
+		}
+
+		window.addEventListener(
+			'pointermove',
+			(event) => {
+				if (event.pointerType !== 'mouse') return;
+				if (overPanel(event)) {
+					// Reading, not aiming: drop the reticle and let the real
+					// cursor do its job until the pointer leaves again.
+					cursor.classList.remove('visible');
+					root.classList.remove('cursor-active');
+					return;
+				}
+				x = event.clientX;
+				y = event.clientY;
+				cursor.classList.add('visible');
+				// Coalesce to one update per frame: pointermove can fire well
+				// above 60Hz on a trackpad and each update rewrites clip-paths.
+				if (!frame) frame = requestAnimationFrame(render);
+			},
+			{ passive: true },
+		);
+
+		document.addEventListener('pointerover', (event) => {
+			if (overPanel(event)) return;
+			const target = event.target as Element | null;
+			const interactive = target?.closest(
+				'a, button, input, textarea, select, label, summary, [role="button"], [role="switch"], canvas.over-node, [tabindex]:not([tabindex="-1"])',
+			);
+			root.classList.toggle('cursor-active', !!interactive);
+		});
+
+		// The canvas swaps .over-node on itself as nodes come under the pointer;
+		// mirror that onto the cursor, since pointerover won't fire again while
+		// the pointer stays inside the same element.
+		const canvas = document.getElementById('graph-canvas');
+		if (canvas) {
+			new MutationObserver(() => {
+				root.classList.toggle('cursor-active', canvas.classList.contains('over-node'));
+			}).observe(canvas, { attributes: true, attributeFilter: ['class'] });
+		}
+
+		document.addEventListener('pointerleave', () => cursor.classList.remove('visible'));
+	}
+</script>

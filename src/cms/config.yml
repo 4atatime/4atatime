@@ -1,0 +1,198 @@
+# Decap CMS configuration.
+#
+# Served, not read directly: src/pages/admin/config.yml.ts substitutes
+# __SITE_ORIGIN__ with whatever address the CMS is being used from, and
+# expands `options: __TAGS__` from src/lib/tags.ts.
+#
+# Every field here has to agree with the Zod schema in src/content.config.ts.
+# If a field is required there it must be required here too, or the CMS will
+# happily commit a file that fails the next build.
+
+backend:
+  name: github
+  repo: 4atatime/4atatime
+  # The branch the CMS writes to. It must be the branch Vercel builds for
+  # production, or you'll publish into a branch nobody is looking at.
+  branch: main
+  # Where the login routes live — src/pages/oauth/. Substituted per request so
+  # localhost, preview deploys and production all work without editing this.
+  base_url: __SITE_ORIGIN__
+  auth_endpoint: oauth
+  commit_messages:
+    create: 'Add {{collection}} "{{slug}}"'
+    update: 'Update {{collection}} "{{slug}}"'
+    delete: 'Delete {{collection}} "{{slug}}"'
+    uploadMedia: 'Upload "{{path}}"'
+    deleteMedia: 'Delete "{{path}}"'
+
+# Fallback for anything uploaded outside a collection that sets its own.
+media_folder: src/assets/work
+public_folder: /src/assets/work
+
+collections:
+  - name: work
+    label: Work
+    label_singular: work
+    folder: src/content/work
+    create: true
+    delete: true
+    slug: '{{slug}}'
+    identifier_field: title
+    summary: '{{title}} — {{section}}'
+    sortable_fields: [sortDate, title, section]
+    # Per-work media folders, so a new upload lands beside that work's other
+    # images rather than in one flat heap.
+    media_folder: /src/assets/work/{{slug}}
+    public_folder: /src/assets/work/{{slug}}
+    fields:
+      - label: Title
+        name: title
+        widget: string
+
+      - label: Collected under
+        name: section
+        widget: select
+        hint: >-
+          The main category. Sets the stamp above the title, which filter the
+          work appears under, and — because different categories are pushed
+          apart — roughly where it lands in the graph.
+        options:
+          - 'UI/UX'
+          - 'Grafix'
+          - 'Ink!'
+          - 'mμsic'
+
+      - label: Intro
+        name: intro
+        widget: text
+        hint: One or two sentences, shown under the title.
+
+      - label: When (as displayed)
+        name: date
+        widget: string
+        hint: 'Free text, exactly as it should read: 06/2025, 2024 – ongoing, coming-soon.'
+
+      - label: Sort date
+        name: sortDate
+        widget: datetime
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        picker_utc: true
+        hint: Used only for ordering, never shown. If the date is fuzzy, pick the 1st.
+
+      - label: Tags
+        name: tags
+        widget: select
+        multiple: true
+        min: 1
+        max: 10
+        hint: >-
+          Pick 5–10. Works sharing tags are drawn together in the graph, so
+          these decide the shape of the homepage as much as they label the work.
+        options: __TAGS__
+
+      - label: What (role)
+        name: role
+        widget: string
+        required: false
+
+      - label: Where (location)
+        name: location
+        widget: string
+        required: false
+
+      - label: How (method / tools)
+        name: tools
+        widget: list
+        required: false
+        field: { label: Tool, name: tool, widget: string }
+
+      - label: Update Log
+        name: status
+        widget: string
+        required: false
+        hint: 'A one-line update, e.g. "Design system in use."'
+
+      - label: Source link
+        name: link
+        widget: string
+        required: false
+        hint: The one main outbound URL. Shown first under "Elsewhere".
+
+      - label: Cover image
+        name: heroImage
+        widget: image
+        required: false
+
+      - label: Elsewhere
+        name: links
+        widget: list
+        required: false
+        label_singular: link
+        summary: '{{fields.label}}'
+        fields:
+          - { label: Label, name: label, widget: string }
+          - { label: URL, name: href, widget: string }
+
+      - label: Plates
+        name: gallery
+        widget: list
+        required: false
+        label_singular: plate
+        summary: '{{fields.title}}'
+        fields:
+          - { label: Image, name: src, widget: image }
+          - { label: Title, name: title, widget: string, required: false }
+          - { label: Caption, name: caption, widget: text, required: false }
+          - { label: Link, name: href, widget: string, required: false }
+
+      - label: Long text
+        name: body
+        widget: markdown
+        required: false
+        hint: The write-up below the cover. Leave empty for short works.
+
+  - name: pages
+    label: Pages
+    files:
+      - name: about
+        label: About & Contact
+        file: src/content/pages/about.md
+        fields:
+          - label: Tagline
+            name: tagline
+            widget: string
+
+          - label: Title
+            name: title
+            widget: string
+
+          - label: Intro
+            name: body
+            widget: markdown
+            hint: The paragraphs under the title. One blank line between them.
+
+          - label: Email heading
+            name: emailLabel
+            widget: string
+
+          - label: Email address
+            name: email
+            widget: string
+
+          - label: Links heading
+            name: linksLabel
+            widget: string
+
+          - label: Links
+            name: links
+            widget: list
+            label_singular: link
+            summary: '{{fields.label}}'
+            fields:
+              - { label: Label, name: label, widget: string }
+              - { label: URL, name: href, widget: string }
+
+          - label: Sign-off
+            name: signoff
+            widget: string

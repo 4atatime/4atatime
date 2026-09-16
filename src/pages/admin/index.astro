@@ -1,0 +1,29 @@
+---
+// The CMS itself. This page is nothing but a loader: Decap ships as a single
+// script that takes over the document and builds its whole interface from the
+// config at ./config.yml.
+//
+// It is deliberately not styled, not linked from anywhere, and marked
+// noindex — it isn't part of the site, it's the back door into it. Anyone can
+// load this page; nobody can do anything with it without a GitHub account that
+// has write access to the repository.
+export const prerender = true;
+
+/** Pinned rather than floating: a CMS that silently upgrades itself is a CMS
+ * that can break on a morning when nobody touched anything. */
+const DECAP_VERSION = '3.11.0';
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>4atatime — content</title>
+		<link href="/admin/config.yml" type="text/yaml" rel="cms-config-url" />
+	</head>
+	<body>
+		<script is:inline src={`https://unpkg.com/decap-cms@${DECAP_VERSION}/dist/decap-cms.js`}></script>
+	</body>
+</html>

@@ -1,0 +1,55 @@
+/*
+  Theme tokens. Base (non-color) tokens live on :root; color tokens are
+  defined per-theme and swapped via [data-theme="light"|"dark"] on <html>.
+  BaseHead.astro sets data-theme synchronously before paint (see the inline
+  bootstrap script) so there is no flash of the wrong theme.
+
+  The graph canvas reads --fg/--muted/--border/--accent through
+  getComputedStyle and re-reads them when data-theme changes, so the graph
+  recolours itself from this file rather than carrying its own palette.
+*/
+
+:root {
+	--radius: 8px;
+	--shadow:
+		0 2px 6px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.1), 0 16px 32px rgba(0, 0, 0, 0.1);
+
+	/* Body/supporting text stack: Roboto Serif, falling through to Noto Serif
+	   TC / Amiri so CJK/Arabic glyphs in otherwise-English copy still render
+	   in the right typeface without needing per-span lang tagging. */
+	--font-body: var(--font-body-name), var(--font-zh-name), var(--font-ar-name), serif;
+	--font-headline: var(--font-headline-name), var(--font-zh-name), var(--font-ar-name), sans-serif;
+	/* Everything in the map/lab-print register — legends, field labels, the
+	   survey slip on a detail page — is set in this rather than the body serif.
+	   A system stack: it never has to be downloaded, and it is the one place
+	   where the plain-machine look is the point. */
+	--font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+:root,
+[data-theme='light'] {
+	--bg: #ffffff;
+	--fg: #14171f;
+	--muted: #5c6a85;
+	--accent: #0891b2;
+	--surface: #f1f5f7;
+	--border: #dce3e8;
+	/* Hairlines in the notation styling. A touch darker than --border, which
+	   is tuned for filled edges: a 1px rule at --border all but disappears. */
+	--rule: #c3ced6;
+}
+
+[data-theme='dark'] {
+	--bg: #0f1219;
+	--fg: #f1f5f7;
+	--muted: #8c9bb5;
+	/* The light theme's turquoise, walked toward green and calmed right down:
+	   hue 157 rather than 192, and a third of the saturation the old cyan had,
+	   so it reads as a soft pigment rather than a backlit one. Still 8.7:1
+	   against the page — comfortably past AAA — because it does real work
+	   here: node highlights, the category stamp, and every link. */
+	--accent: #76bfa3;
+	--surface: #1a1f29;
+	--border: #2a303c;
+	--rule: #3b4453;
+}

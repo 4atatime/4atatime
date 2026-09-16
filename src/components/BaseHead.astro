@@ -3,26 +3,31 @@
 // all pages through the use of the <BaseHead /> component.
 import '../styles/global.css';
 import type { ImageMetadata } from 'astro';
-import FallbackImage from '../assets/blog-placeholder-1.jpg';
 import { SITE_TITLE } from '../consts';
 import { Font } from 'astro:assets';
 
 interface Props {
 	title: string;
 	description: string;
+	/** Overrides the default share card, which is the mark on a plain ground. */
 	image?: ImageMetadata;
 }
 
+const DEFAULT_SHARE_IMAGE = '/og-image.png';
+
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
-const { title, description, image = FallbackImage } = Astro.props;
+const { title, description, image } = Astro.props;
 ---
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" href="/favicon.ico" />
+<!-- The mark itself, re-coloured to a mid tone so it reads against both a
+     light and a dark browser chrome (see the favicon build note in README). -->
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png" />
+<link rel="apple-touch-icon" href="/favicon-180.png" />
 <link rel="sitemap" href="/sitemap-index.xml" />
 <link
 	rel="alternate"
@@ -32,7 +37,26 @@ const { title, description, image = FallbackImage } = Astro.props;
 />
 <meta name="generator" content={Astro.generator} />
 
-<Font cssVariable="--font-atkinson" preload />
+<Font cssVariable="--font-body-name" preload />
+<Font cssVariable="--font-headline-name" preload />
+<Font cssVariable="--font-zh-name" />
+<Font cssVariable="--font-ar-name" />
+
+<script is:inline>
+	// Set the theme synchronously, before first paint, to avoid a flash of
+	// the wrong theme. Runs on every navigation (Astro doesn't persist
+	// document state across full page loads).
+	(function () {
+		const stored = localStorage.getItem('theme');
+		const theme =
+			stored === 'light' || stored === 'dark'
+				? stored
+				: window.matchMedia('(prefers-color-scheme: dark)').matches
+					? 'dark'
+					: 'light';
+		document.documentElement.dataset.theme = theme;
+	})();
+</script>
 
 <!-- Canonical URL -->
 <link rel="canonical" href={canonicalURL} />
@@ -46,7 +70,11 @@ const { title, description, image = FallbackImage } = Astro.props;
 <meta property="og:url" content={Astro.url} />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
-<meta property="og:image" content={new URL(image.src, Astro.url)} />
+<meta property="og:image" content={new URL(image?.src ?? DEFAULT_SHARE_IMAGE, Astro.url)} />
+<meta property="og:image:alt" content={SITE_TITLE} />
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={new URL(image?.src ?? DEFAULT_SHARE_IMAGE, Astro.url)} />

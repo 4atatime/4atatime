@@ -1,0 +1,319 @@
+---
+// The top-left corner of the homepage, styled as the title block of a survey
+// sheet: the mark, the greeting, a key for how to move around, and the
+// category filter — the legend that decides which works are plotted.
+//
+// The filter buttons write to the URL rather than to local state (see
+// ../scripts/filter.ts) so a filtered garden is a shareable link, and so the
+// same categories can be pressed from inside an open work.
+import { Image } from 'astro:assets';
+import logo from '../assets/4atatime_logo.png';
+import { ALL_CATEGORIES, CATEGORIES } from '../lib/categories';
+import { SITE_GREETING } from '../consts';
+
+const options = [ALL_CATEGORIES, ...CATEGORIES];
+---
+
+<section class="station" aria-label="Legend">
+	<header class="head">
+		<Image class="mark" src={logo} alt="4atatime" widths={[120, 240]} sizes="120px" loading="eager" />
+		<p class="greeting">{SITE_GREETING}</p>
+	</header>
+
+	<div class="block">
+		<h2 class="label">Navigation</h2>
+		<ul class="key">
+			<li class="on-pointer"><span class="key-act">drag</span><span class="key-what">turn the field</span></li>
+			<li class="on-pointer"><span class="key-act">scroll</span><span class="key-what">zoom in / out</span></li>
+			<li class="on-pointer"><span class="key-act">hover</span><span class="key-what">preview a work</span></li>
+			<li class="on-pointer"><span class="key-act">click</span><span class="key-what">open a work</span></li>
+			<li class="on-touch"><span class="key-act">drag</span><span class="key-what">turn the field</span></li>
+			<li class="on-touch"><span class="key-act">pinch</span><span class="key-what">zoom in / out</span></li>
+			<li class="on-touch"><span class="key-act">tap ×2</span><span class="key-what">preview, then open</span></li>
+		</ul>
+	</div>
+
+	<div class="block">
+		<h2 class="label">Collections</h2>
+		<ul class="filters" id="category-filter">
+			{
+				options.map((category, i) => (
+					<li>
+						<button
+							type="button"
+							class="filter"
+							data-filter={category.slug}
+							aria-pressed="false"
+						>
+							<span class:list={['code', `organic-${(i % 6) + 1}`]}>{category.code}</span>
+							<span class="name">{category.name}</span>
+							<span class="count" data-filter-count={category.slug} />
+						</button>
+					</li>
+				))
+			}
+		</ul>
+	</div>
+</section>
+
+<style>
+	.station {
+		position: fixed;
+		top: 1.15rem;
+		left: 1.15rem;
+		z-index: 30;
+		display: flex;
+		flex-direction: column;
+		gap: 0.95rem;
+		width: 14.5rem;
+		max-width: 62vw;
+		/* The box is a legend over a map, not a panel: only its buttons take the
+		   pointer, so drags meant for the graph pass straight through. */
+		pointer-events: none;
+	}
+
+	.head {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.mark {
+		width: 62px;
+		height: auto;
+		opacity: 0.55;
+	}
+	/* The mark is a dark brush drawing; in the dark theme it has to be lifted
+	   off the page rather than sit as a black shape on black. */
+	:global([data-theme='dark']) .mark {
+		filter: invert(1);
+		opacity: 0.45;
+	}
+
+	/* Still deliberately quiet — it's a greeting, not a headline — but a step
+	   up in size from the whisper it used to be. */
+	.greeting {
+		margin: 0;
+		max-width: 13rem;
+		font-size: 0.82rem;
+		line-height: 1.35;
+		color: var(--muted);
+		opacity: 0.55;
+	}
+
+	.label {
+		margin: 0 0 0.4rem;
+		padding-bottom: 0.3rem;
+		font-family: var(--font-mono);
+		font-size: 0.56rem;
+		font-weight: 400;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+		color: var(--muted);
+		opacity: 0.8;
+		border-bottom: 1px solid var(--rule);
+	}
+
+	.key,
+	.filters {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	.key li {
+		display: flex;
+		align-items: baseline;
+		gap: 0.45rem;
+		font-size: 0.68rem;
+		line-height: 1.7;
+		color: var(--muted);
+		opacity: 0.7;
+	}
+	.key-act {
+		flex: none;
+		width: 3.1rem;
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.06em;
+		color: var(--fg);
+		opacity: 0.75;
+	}
+
+	/* Same key, phrased for whichever input the device actually has. */
+	.on-touch {
+		display: none !important;
+	}
+	@media (hover: none) {
+		.on-pointer {
+			display: none !important;
+		}
+		.on-touch {
+			display: flex !important;
+		}
+	}
+
+	.filters {
+		display: flex;
+		flex-direction: column;
+		gap: 1px;
+	}
+
+	.filter {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		width: 100%;
+		padding: 0.24rem 0.3rem 0.24rem 0;
+		pointer-events: auto;
+		color: var(--muted);
+		text-align: left;
+		transition: color 0.18s ease;
+	}
+	.filter:hover,
+	.filter:focus-visible {
+		color: var(--fg);
+	}
+	.filter:focus-visible {
+		outline: 1px solid var(--accent);
+		outline-offset: 1px;
+	}
+
+	/* The two-letter code sits in a box like a marker on a map key; the
+	   selected one is filled in. */
+	.code {
+		flex: none;
+		display: grid;
+		place-items: center;
+		min-width: 1.6rem;
+		height: 1.1rem;
+		padding: 0 0.2rem;
+		font-family: var(--font-mono);
+		font-size: 0.54rem;
+		letter-spacing: 0.08em;
+		border: 1px solid var(--rule);
+		color: var(--muted);
+		--o: 5px;
+		transition:
+			background 0.18s ease,
+			border-color 0.18s ease,
+			color 0.18s ease;
+	}
+	.name {
+		flex: 1;
+		font-size: 0.78rem;
+		line-height: 1.3;
+	}
+	.count {
+		flex: none;
+		font-family: var(--font-mono);
+		font-size: 0.56rem;
+		color: var(--muted);
+		opacity: 0.6;
+	}
+
+	.filter:hover .code,
+	.filter:focus-visible .code {
+		border-color: var(--accent);
+		color: var(--accent);
+	}
+	.filter[aria-pressed='true'] {
+		color: var(--fg);
+	}
+	.filter[aria-pressed='true'] .code {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: var(--bg);
+	}
+
+	@media (max-width: 720px) {
+		.station {
+			top: 0.8rem;
+			left: 0.9rem;
+			width: 11.5rem;
+			gap: 0.7rem;
+			/* On a phone the legend and the graph are fighting over the same
+			   corner — there is no room to put them side by side. A soft wash of
+			   the page colour behind it keeps the text readable over whatever
+			   nodes drift underneath, without turning it into a solid panel. */
+			padding: 0.1rem 0.5rem 0.6rem 0;
+			background: linear-gradient(
+				to bottom right,
+				var(--bg) 0%,
+				var(--bg) 55%,
+				transparent 100%
+			);
+		}
+		.mark {
+			width: 46px;
+		}
+		.greeting {
+			font-size: 0.72rem;
+		}
+		/* The key is desktop hand-holding: on a phone it collapses to one line
+		   so the collections, which people actually press, stay near the top. */
+		.key {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0 0.5rem;
+		}
+		.key li {
+			gap: 0.3rem;
+			font-size: 0.62rem;
+			line-height: 1.5;
+		}
+		.key-act {
+			width: auto;
+		}
+		.name {
+			font-size: 0.72rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.filter,
+		.code {
+			transition: none;
+		}
+	}
+</style>
+
+<script>
+	import { announce, onFilterChange, setFilter } from '../scripts/filter';
+	import { ALL_CATEGORIES, categorySlug } from '../lib/categories';
+
+	const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+
+	// How many works each category holds, counted off the graph payload rather
+	// than duplicated into this component — one source of truth for the data.
+	const raw = document.getElementById('graph-data')?.textContent;
+	if (raw) {
+		const nodes = (JSON.parse(raw).nodes ?? []) as { section: string }[];
+		const counts = new Map<string, number>();
+		for (const node of nodes) {
+			const slug = categorySlug(node.section);
+			counts.set(slug, (counts.get(slug) ?? 0) + 1);
+		}
+		document.querySelectorAll<HTMLElement>('[data-filter-count]').forEach((el) => {
+			const slug = el.dataset.filterCount ?? '';
+			el.textContent = String(slug === ALL_CATEGORIES.slug ? nodes.length : (counts.get(slug) ?? 0));
+		});
+	}
+
+	for (const button of buttons) {
+		button.addEventListener('click', () => setFilter(button.dataset.filter ?? ALL_CATEGORIES.slug));
+	}
+
+	onFilterChange((slug) => {
+		for (const button of buttons) {
+			button.setAttribute('aria-pressed', String(button.dataset.filter === slug));
+		}
+	});
+
+	// The filter lives in the query string, so the back button has to put the
+	// legend back in step with it.
+	window.addEventListener('popstate', announce);
+
+	// Paint the initial state (and let the graph pick it up on first load).
+	announce();
+</script>

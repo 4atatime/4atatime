@@ -1,0 +1,564 @@
+---
+// A work, as it appears inside the side panel. The brief for this page was
+// "more experimental, more bold" — so the header is built as a field survey
+// slip rather than a title and some tags:
+//
+//   · the category the work is collected under is lifted out of the tag row
+//     entirely and printed above the title, where a collection stamp would go
+//     — and it doubles as the filter button for that category;
+//   · a sheet number and the coordinates run down the side as marginalia;
+//   · the remaining metadata is a keyed table with dotted leaders, the way a
+//     map legend or a lab print lists its readings, rather than a row of
+//     chips;
+//   · the title is given a lot of room above it. The panel scrolls, so the
+//     space costs nothing and the drop is the point.
+//
+// Below the header the page is a plate gallery: each image with its own
+// number, caption, and (where the source site had one) an outbound link.
+import type { CollectionEntry } from 'astro:content';
+import { render } from 'astro:content';
+import { Image } from 'astro:assets';
+import { categoryOf } from '../lib/categories';
+
+interface Props {
+	item: CollectionEntry<'work'>;
+}
+
+const { item } = Astro.props;
+const { Content } = await render(item);
+const { title, section, tags, date, status, link, intro, heroImage, role, location, tools, links, gallery } =
+	item.data;
+
+const category = categoryOf(section);
+
+// The sheet number is cosmetic, but it should be stable per work rather than
+// random, so it's derived from the id.
+const sheet = [...item.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 9000, 7) + 1000;
+
+// Every metadata row that this particular work actually has. Rendering an
+// empty "SITE — " row would undercut the whole conceit that these are
+// readings taken off something real.
+const readings: { key: string; value: string }[] = [
+	{ key: 'When', value: date },
+	...(role ? [{ key: 'What', value: role }] : []),
+	...(location ? [{ key: 'Where', value: location }] : []),
+	...(tools.length ? [{ key: 'How', value: tools.join(', ') }] : []),
+	...(status ? [{ key: 'Update Log', value: status }] : []),
+];
+---
+
+<article class="work">
+	<header class="slip">
+		<div class="margin" aria-hidden="true">
+			<span class="sheet">NO. {sheet}</span>
+			<span class="rule-v"></span>
+			<span class="code organic-5">{category?.code ?? '··'}</span>
+		</div>
+
+		<div class="head">
+			<button type="button" class="collected" data-panel-filter={category?.slug}>
+				<span class="collected-label">collected under</span>
+				<span class="collected-name organic-3">{section}</span>
+			</button>
+
+			<h1>{title}</h1>
+
+			<p class="intro">{intro}</p>
+
+			<dl class="readings">
+				{
+					readings.map((reading) => (
+						<div class="reading">
+							<dt>{reading.key}</dt>
+							<dd>{reading.value}</dd>
+						</div>
+					))
+				}
+			</dl>
+
+			{tags.length > 0 && <p class="tags">{tags.join(', ')}</p>}
+		</div>
+	</header>
+
+	{
+		heroImage && (
+			<figure class="hero">
+				<Image
+					class="organic-1"
+					src={heroImage}
+					alt={`${title} — cover`}
+					widths={[480, 960, 1440]}
+					sizes="(min-width: 721px) 45vw, 92vw"
+					loading="eager"
+				/>
+			</figure>
+		)
+	}
+
+	<div class="body">
+		<Content />
+	</div>
+
+	{
+		gallery.length > 0 && (
+			<section class="plates" aria-label="Plates">
+				<h2 class="section-label">
+					Plates <span class="section-count">{gallery.length}</span>
+				</h2>
+				<ol>
+					{gallery.map((plate, i) => (
+						<li class="plate">
+							<figure>
+								<Image
+									class={`organic-${(i % 6) + 1}`}
+									src={plate.src}
+									alt={plate.title ?? `${title} — plate ${i + 1}`}
+									widths={[420, 840, 1260]}
+									sizes="(min-width: 721px) 45vw, 92vw"
+									loading="lazy"
+								/>
+								<figcaption>
+									<span class="plate-no">{String(i + 1).padStart(2, '0')}</span>
+									<span class="plate-text">
+										{plate.title &&
+											(plate.href ? (
+												<a class="plate-title" href={plate.href} target="_blank" rel="noopener noreferrer">
+													{plate.title} <span class="ext">↗</span>
+												</a>
+											) : (
+												<span class="plate-title">{plate.title}</span>
+											))}
+										{plate.caption && <span class="plate-caption">{plate.caption}</span>}
+									</span>
+								</figcaption>
+							</figure>
+						</li>
+					))}
+				</ol>
+			</section>
+		)
+	}
+
+	{
+		(links.length > 0 || link) && (
+			<section class="elsewhere" aria-label="Elsewhere">
+				<h2 class="section-label">Elsewhere</h2>
+				<ul>
+					{link && (
+						<li>
+							<a href={link} target="_blank" rel="noopener noreferrer">
+								Source <span class="ext">↗</span>
+							</a>
+						</li>
+					)}
+					{links.map((entry) => (
+						<li>
+							<a href={entry.href} target="_blank" rel="noopener noreferrer">
+								{entry.label} <span class="ext">↗</span>
+							</a>
+						</li>
+					))}
+				</ul>
+			</section>
+		)
+	}
+</article>
+
+<style>
+	.work {
+		max-width: 68ch;
+	}
+	/* Prose keeps a readable measure however wide the panel gets; only the
+	   plate grid is allowed to use the full width (see the wide step below). */
+	.body {
+		max-width: 62ch;
+	}
+
+	/* --- Survey slip ---------------------------------------------------- */
+
+	.slip {
+		display: flex;
+		gap: 1.1rem;
+		/* Deliberately generous: the drop before the title is what makes the
+		   page feel like a printed sheet rather than a dialog. */
+		padding: 2.5rem 0 1.9rem;
+		border-bottom: 1px solid var(--rule);
+	}
+
+	/* Marginalia column — sheet number, a hairline, the category code. */
+	.margin {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.6rem;
+		flex: none;
+		padding-top: 0.3rem;
+		font-family: var(--font-mono);
+	}
+	.sheet {
+		font-size: 0.52rem;
+		letter-spacing: 0.12em;
+		color: var(--muted);
+		opacity: 0.7;
+		writing-mode: vertical-rl;
+	}
+	.rule-v {
+		flex: 1;
+		width: 1px;
+		min-height: 1.5rem;
+		background: var(--rule);
+	}
+	.margin .code {
+		--o: 6px;
+		display: grid;
+		place-items: center;
+		width: 1.6rem;
+		height: 1.6rem;
+		font-size: 0.55rem;
+		letter-spacing: 0.06em;
+		border: 1px solid var(--accent);
+		color: var(--accent);
+	}
+
+	.head {
+		flex: 1;
+		min-width: 0;
+	}
+
+	/* "collected under Grafix", above the title — and a filter button. */
+	.collected {
+		display: flex;
+		align-items: baseline;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin-bottom: 1.1rem;
+		font-family: var(--font-mono);
+		text-align: left;
+	}
+	.collected-label {
+		font-size: 0.56rem;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+		color: var(--muted);
+		opacity: 0.8;
+	}
+	.collected-name {
+		--o: 6px;
+		padding: 0.18em 0.55em;
+		font-size: 0.7rem;
+		letter-spacing: 0.06em;
+		border: 1px solid var(--accent);
+		color: var(--accent);
+		transition:
+			background 0.18s ease,
+			color 0.18s ease;
+	}
+	.collected:hover .collected-name,
+	.collected:focus-visible .collected-name {
+		background: var(--accent);
+		color: var(--bg);
+	}
+	.collected:focus-visible {
+		outline: 1px solid var(--accent);
+		outline-offset: 3px;
+	}
+
+	h1 {
+		margin: 0 0 0.9rem;
+		/* Sized by the panel's own width step below, not by the viewport — the
+		   panel is the thing that changes size here. */
+		font-size: 2.1rem;
+		line-height: 1.02;
+		letter-spacing: -0.015em;
+	}
+
+	.intro {
+		margin: 0 0 1.6rem;
+		max-width: 46ch;
+		font-size: 1rem;
+		line-height: 1.55;
+		color: var(--fg);
+	}
+
+	/* Keyed readings with dotted leaders, as on a legend. */
+	.readings {
+		margin: 0 0 1.1rem;
+	}
+	.reading {
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		padding: 0.34rem 0;
+		border-top: 1px dotted var(--rule);
+	}
+	.reading:last-child {
+		border-bottom: 1px dotted var(--rule);
+	}
+	.reading dt {
+		flex: none;
+		width: 5.4rem;
+		font-family: var(--font-mono);
+		font-size: 0.55rem;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--muted);
+		opacity: 0.8;
+	}
+	.reading dd {
+		flex: 1;
+		margin: 0;
+		font-size: 0.82rem;
+		line-height: 1.5;
+		color: var(--fg);
+	}
+
+	/* A caption line rather than a row of chips: with 5–10 tags on every work
+	   the chips were a wall of boxes, and they competed with the "collected
+	   under" stamp, which is the one label that should read as a label. */
+	.tags {
+		margin: 0;
+		font-family: var(--font-mono);
+		font-size: 0.64rem;
+		line-height: 1.7;
+		letter-spacing: 0.06em;
+		color: var(--muted);
+	}
+
+	/* --- Body ------------------------------------------------------------ */
+
+	.hero {
+		margin: 1.9rem 0 0;
+	}
+	.hero :global(img),
+	.plate :global(img) {
+		display: block;
+		width: 100%;
+		height: auto;
+		border: 1px solid var(--rule);
+		--o: 16px;
+	}
+
+	.body {
+		margin-top: 1.9rem;
+		font-size: 0.95rem;
+		line-height: 1.75;
+		color: var(--muted);
+	}
+	.body :global(p) {
+		margin: 0 0 1.1rem;
+	}
+	.body :global(h2) {
+		margin: 2.2rem 0 0.6rem;
+		font-size: 1.05rem;
+		color: var(--fg);
+	}
+	.body :global(h3) {
+		margin: 1.6rem 0 0.4rem;
+		font-family: var(--font-mono);
+		font-size: 0.68rem;
+		font-weight: 400;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--fg);
+	}
+	.body :global(img) {
+		--o: 16px;
+		width: 100%;
+		height: auto;
+		margin: 1.4rem 0;
+		border: 1px solid var(--rule);
+		border-radius: calc(var(--o) * 1.5) calc(var(--o) * 0.55) calc(var(--o) * 1.15)
+			calc(var(--o) * 0.8) / calc(var(--o) * 0.7) calc(var(--o) * 1.4) calc(var(--o) * 0.6)
+			calc(var(--o) * 1.25);
+	}
+	.body :global(ul) {
+		padding-left: 1.1rem;
+	}
+	.body :global(li) {
+		margin-bottom: 0.4rem;
+	}
+
+	/* --- Plates ----------------------------------------------------------- */
+
+	.section-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 2.8rem 0 1.1rem;
+		padding-bottom: 0.4rem;
+		font-family: var(--font-mono);
+		font-size: 0.58rem;
+		font-weight: 400;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--muted);
+		border-bottom: 1px solid var(--rule);
+	}
+	.section-count {
+		font-size: 0.52rem;
+		opacity: 0.7;
+	}
+
+	.plates ol {
+		display: grid;
+		/* One column by default; the panel widens into two and three. See the
+		   data-size steps at the bottom of this file. */
+		grid-template-columns: 1fr;
+		gap: 1.8rem 1.2rem;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.plate figure {
+		margin: 0;
+	}
+	.plate figcaption {
+		display: flex;
+		gap: 0.55rem;
+		margin-top: 0.55rem;
+	}
+	.plate-no {
+		flex: none;
+		font-family: var(--font-mono);
+		font-size: 0.55rem;
+		line-height: 1.7;
+		letter-spacing: 0.08em;
+		color: var(--accent);
+	}
+	.plate-text {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+		min-width: 0;
+	}
+	.plate-title {
+		font-size: 0.82rem;
+		line-height: 1.35;
+		color: var(--fg);
+		text-decoration: none;
+	}
+	a.plate-title {
+		border-bottom: 1px solid transparent;
+		transition: border-color 0.15s ease, color 0.15s ease;
+	}
+	a.plate-title:hover,
+	a.plate-title:focus-visible {
+		color: var(--accent);
+		border-bottom-color: var(--accent);
+	}
+	.plate-caption {
+		font-size: 0.74rem;
+		line-height: 1.5;
+		color: var(--muted);
+	}
+	.ext {
+		font-size: 0.85em;
+		opacity: 0.8;
+	}
+
+	/* --- Elsewhere -------------------------------------------------------- */
+
+	.elsewhere ul {
+		display: flex;
+		flex-direction: column;
+		list-style: none;
+		margin: 0;
+		padding: 0;
+	}
+	.elsewhere li {
+		border-bottom: 1px dotted var(--rule);
+	}
+	.elsewhere a {
+		display: block;
+		padding: 0.55rem 0;
+		font-family: var(--font-mono);
+		font-size: 0.72rem;
+		letter-spacing: 0.06em;
+		color: var(--accent);
+		text-decoration: none;
+		transition: padding-left 0.18s ease;
+	}
+	.elsewhere a:hover,
+	.elsewhere a:focus-visible {
+		padding-left: 0.5rem;
+	}
+
+	/* --- Panel width steps ------------------------------------------------
+	   The panel publishes how wide it currently is (see ../scripts/window.ts);
+	   the plate grid, the title size and the marginalia respond to the panel,
+	   not the viewport, so dragging the edge genuinely re-lays the page out. */
+	:global(#detail-window[data-size='mid']) .plates ol {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	:global(#detail-window[data-size='wide']) .plates ol {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+	:global(#detail-window[data-size='mid']) h1 {
+		font-size: 2.5rem;
+	}
+	:global(#detail-window[data-size='wide']) h1 {
+		font-size: 3.1rem;
+	}
+	:global(#detail-window[data-size='wide']) .slip {
+		gap: 1.8rem;
+		padding-top: 3.4rem;
+	}
+	/* Dragged out wide, the extra room goes to the plate grid — and only to
+	   the plate grid. A hero photo or a metadata table stretched across 1700px
+	   is worse than one that stops, so each of those keeps its own measure and
+	   the page stays left-aligned against the margin rule. */
+	:global(#detail-window[data-size='wide']) .work {
+		max-width: none;
+	}
+	:global(#detail-window[data-size='wide']) .hero,
+	:global(#detail-window[data-size='wide']) .readings,
+	:global(#detail-window[data-size='wide']) .section-label,
+	:global(#detail-window[data-size='wide']) .elsewhere ul {
+		max-width: 60ch;
+	}
+	:global(#detail-window[data-size='wide']) .plates ol {
+		max-width: 150ch;
+	}
+	/* In a narrow dock the marginalia column is pure cost — it eats width the
+	   title needs far more. */
+	:global(#detail-window[data-size='narrow']) .margin {
+		display: none;
+	}
+	:global(#detail-window[data-size='narrow']) .slip {
+		padding-top: 1.9rem;
+	}
+	:global(#detail-window[data-size='narrow']) h1 {
+		font-size: 1.8rem;
+	}
+	:global(#detail-window[data-size='narrow']) .reading {
+		flex-direction: column;
+		gap: 0.1rem;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.collected-name,
+		a.plate-title,
+		.elsewhere a {
+			transition: none;
+		}
+	}
+</style>
+
+<script>
+	// The "collected under" stamp is also the filter for that category. It
+	// closes the panel on the way, because the result of pressing it is a
+	// change to the graph behind — which you can't see through an open panel.
+	import { setFilter } from '../scripts/filter';
+
+	document.addEventListener('click', (event) => {
+		const button = (event.target as Element).closest<HTMLElement>('[data-panel-filter]');
+		if (!button) return;
+		const slug = button.dataset.panelFilter;
+		if (!slug) return;
+		// Close the panel first (pushState fires nothing on its own, so the
+		// window and the graph both have to be told), then apply the filter.
+		history.pushState(null, '', location.pathname + location.search);
+		window.dispatchEvent(new HashChangeEvent('hashchange'));
+		setFilter(slug);
+	});
+</script>

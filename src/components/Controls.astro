@@ -1,0 +1,258 @@
+---
+// The only chrome left in the top-right corner: lights (theme) and sound.
+// Both are switches with a state-reflecting icon beside them — sun/moon for
+// lights, speaker with or without waves for sound — so the purpose reads
+// without a text label. Kept in one component because they're one cluster and
+// share the switch styling.
+//
+// Theme state is bootstrapped synchronously in BaseHead.astro to avoid a flash
+// of the wrong theme; this only wires up click-to-toggle and persistence.
+//
+// Sound assets: an ambient loop at public/audio/ambient.mp3 plus optional
+// one-shots at public/audio/click-1.mp3 … click-5.mp3. Missing files fail
+// silently (every play() is caught), so the toggle works either way.
+const CLICK_SOUND_COUNT = 5;
+---
+
+<div class="controls">
+	<button
+		type="button"
+		id="theme-toggle"
+		class="switch"
+		role="switch"
+		aria-checked="true"
+		aria-label="Toggle light/dark theme"
+	>
+		<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+			<g class="icon-sun">
+				<circle cx="12" cy="12" r="4"></circle>
+				<path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"></path>
+			</g>
+			<path class="icon-moon" d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z"></path>
+		</svg>
+		<span class="track"><span class="knob"></span></span>
+	</button>
+
+	<button
+		type="button"
+		id="sound-toggle"
+		class="switch"
+		role="switch"
+		aria-checked="true"
+		aria-label="Toggle sound"
+	>
+		<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+			<path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4Z"></path>
+			<g class="icon-waves">
+				<path d="M15.5 9.2a4 4 0 0 1 0 5.6"></path>
+				<path d="M18 6.8a7.5 7.5 0 0 1 0 10.4"></path>
+			</g>
+			<path class="icon-mute" d="M16 9.5l5 5M21 9.5l-5 5"></path>
+		</svg>
+		<span class="track"><span class="knob"></span></span>
+	</button>
+</div>
+
+<audio id="ambient-audio" src="/audio/ambient.mp3" loop preload="none"></audio>
+
+<style>
+	.controls {
+		position: fixed;
+		top: 1.1rem;
+		right: 1.1rem;
+		z-index: 40;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.35rem;
+	}
+
+	.switch {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.3rem 0.35rem;
+		background: transparent;
+		border: none;
+		color: var(--muted);
+		transition: color 0.2s ease;
+	}
+	.switch:hover,
+	.switch:focus-visible {
+		color: var(--fg);
+	}
+	.switch:focus-visible {
+		outline: 1px solid var(--accent);
+		outline-offset: 2px;
+		border-radius: var(--radius);
+	}
+
+	.icon {
+		width: 15px;
+		height: 15px;
+		flex-shrink: 0;
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.6;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	.track {
+		position: relative;
+		width: 28px;
+		height: 15px;
+		border-radius: 999px;
+		background: var(--border);
+		transition: background 0.2s ease;
+	}
+	.knob {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 11px;
+		height: 11px;
+		border-radius: 50%;
+		background: var(--bg);
+		transition: transform 0.2s ease;
+	}
+
+	/* Each switch is "on" for its own thing — lights on in the light theme,
+	   sound on when unmuted — so they're driven by different root attributes. */
+	:global([data-theme='light']) #theme-toggle .track,
+	:global([data-sound='on']) #sound-toggle .track {
+		background: var(--accent);
+	}
+	:global([data-theme='light']) #theme-toggle .knob,
+	:global([data-sound='on']) #sound-toggle .knob {
+		transform: translateX(13px);
+	}
+
+	/* Show only the glyph that matches the current state. */
+	.icon-moon,
+	:global([data-theme='light']) .icon-sun {
+		display: inline;
+	}
+	.icon-sun,
+	:global([data-theme='light']) .icon-moon {
+		display: none;
+	}
+
+	.icon-mute {
+		display: inline;
+	}
+	.icon-waves {
+		display: none;
+	}
+	:global([data-sound='on']) .icon-waves {
+		display: inline;
+	}
+	:global([data-sound='on']) .icon-mute {
+		display: none;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.knob,
+		.track,
+		.switch {
+			transition: none;
+		}
+	}
+</style>
+
+<script define:vars={{ CLICK_SOUND_COUNT }}>
+	// --- Lights -----------------------------------------------------------
+	const themeToggle = document.getElementById('theme-toggle');
+
+	function currentTheme() {
+		return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+	}
+
+	function applyTheme() {
+		const theme = currentTheme();
+		themeToggle?.setAttribute('aria-checked', String(theme === 'light'));
+		themeToggle?.setAttribute(
+			'aria-label',
+			theme === 'light' ? 'Lights are on. Switch to dark.' : 'Lights are off. Switch to light.',
+		);
+	}
+
+	themeToggle?.addEventListener('click', () => {
+		const next = currentTheme() === 'light' ? 'dark' : 'light';
+		document.documentElement.dataset.theme = next;
+		try {
+			localStorage.setItem('theme', next);
+		} catch {
+			/* private mode — the choice just won't survive a reload */
+		}
+		applyTheme();
+	});
+
+	applyTheme();
+
+	// --- Sound ------------------------------------------------------------
+	const soundToggle = document.getElementById('sound-toggle');
+	const ambient = document.getElementById('ambient-audio');
+	const STORAGE_KEY = 'sound-muted';
+
+	function isMuted() {
+		try {
+			return localStorage.getItem(STORAGE_KEY) === 'true';
+		} catch {
+			return false;
+		}
+	}
+
+	function applySound() {
+		const muted = isMuted();
+		soundToggle?.setAttribute('aria-checked', String(!muted));
+		soundToggle?.setAttribute(
+			'aria-label',
+			muted ? 'Sound is off. Turn sound on.' : 'Sound is on. Turn sound off.',
+		);
+		document.documentElement.dataset.sound = muted ? 'off' : 'on';
+		if (ambient instanceof HTMLAudioElement) {
+			if (muted) {
+				ambient.pause();
+			} else {
+				ambient.volume = 0.3;
+				ambient.play().catch(() => {
+					/* blocked until a user gesture, or file missing — fine either way */
+				});
+			}
+		}
+	}
+
+	soundToggle?.addEventListener('click', () => {
+		try {
+			localStorage.setItem(STORAGE_KEY, String(!isMuted()));
+		} catch {
+			/* ignored, same as above */
+		}
+		applySound();
+	});
+
+	// Browsers block audio until a real user gesture — retry once on the first
+	// interaction anywhere on the page.
+	function tryStartOnce() {
+		if (!isMuted()) applySound();
+		document.removeEventListener('click', tryStartOnce);
+		document.removeEventListener('keydown', tryStartOnce);
+	}
+	document.addEventListener('click', tryStartOnce, { once: true });
+	document.addEventListener('keydown', tryStartOnce, { once: true });
+
+	document.addEventListener('click', (e) => {
+		if (isMuted()) return;
+		const target = e.target instanceof Element ? e.target : null;
+		if (!target?.closest('a, button, [role="button"], [role="switch"]')) return;
+		const n = 1 + Math.floor(Math.random() * CLICK_SOUND_COUNT);
+		const sound = new Audio(`/audio/click-${n}.mp3`);
+		sound.volume = 0.4;
+		sound.play().catch(() => {
+			/* file missing until sound assets are supplied */
+		});
+	});
+
+	applySound();
+</script>

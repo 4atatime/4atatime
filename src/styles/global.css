@@ -1,141 +1,190 @@
 /*
-  The CSS in this style tag is based off of Bear Blog's default CSS.
-  https://github.com/HermanMartinus/bearblog/blob/297026a877bc2ab2b3bdfbd6b9f7961c350917dd/templates/styles/blog/default.css
-  License MIT: https://github.com/HermanMartinus/bearblog/blob/master/LICENSE.md
+  Base typography + reset. The site is a single full-bleed page: the graph
+  canvas fills the viewport and everything else floats over it in a corner, so
+  there is no document flow to style — no centred column, no page scroll. Long
+  copy scrolls inside the pop-up window instead.
  */
 
-:root {
-	--accent: #2337ff;
-	--accent-dark: #000d8a;
-	--black: 15, 18, 25;
-	--gray: 96, 115, 159;
-	--gray-light: 229, 233, 240;
-	--gray-dark: 34, 41, 57;
-	--gray-gradient: rgba(var(--gray-light), 50%), #fff;
-	--box-shadow:
-		0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
-		0 16px 32px rgba(var(--gray), 33%);
+@import './tokens.css';
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
 }
+
+html {
+	/* Replaced by the lat/long crosshair in CustomCursor.astro; touch devices
+	   keep their real cursor and never render it. */
+	cursor: none;
+	height: 100%;
+}
+@media (hover: none) {
+	html {
+		cursor: auto;
+	}
+}
+
+/* The reticle belongs to the map. Inside the detail panel you are reading a
+   document, not aiming at a coordinate, so the real cursor comes back — and
+   CustomCursor.astro hides the crosshair for as long as the pointer is in
+   there, so the two never show at once. The panel has to opt its own
+   interactive parts back in to their usual cursors, because `cursor: inherit`
+   on <button> (set below) would otherwise hand them the text caret. */
+#detail-window {
+	cursor: auto;
+}
+#detail-window a,
+#detail-window button,
+#detail-window [role='button'] {
+	cursor: pointer;
+}
+#detail-window .resizer {
+	cursor: ew-resize;
+}
+@media (max-width: 720px) {
+	#detail-window .resizer {
+		cursor: ns-resize;
+	}
+}
+
 body {
-	font-family: var(--font-atkinson);
 	margin: 0;
-	padding: 0;
+	height: 100%;
+	/* The canvas is fixed and the panels are fixed — nothing should ever move
+	   the viewport itself. */
+	overflow: hidden;
+	font-family: var(--font-body);
+	font-weight: 400;
+	font-size: 17px;
+	line-height: 1.7;
+	background: var(--bg);
+	color: var(--fg);
 	text-align: left;
-	background: linear-gradient(var(--gray-gradient)) no-repeat;
-	background-size: 100% 600px;
 	word-wrap: break-word;
 	overflow-wrap: break-word;
-	color: rgb(var(--gray-dark));
-	font-size: 20px;
-	line-height: 1.7;
+	-webkit-font-smoothing: antialiased;
 }
-main {
-	width: 720px;
-	max-width: calc(100% - 2em);
-	margin: auto;
-	padding: 3em 1em;
-}
+
 h1,
 h2,
 h3,
 h4,
 h5,
 h6 {
-	margin: 0 0 0.5rem 0;
-	color: rgb(var(--black));
-	line-height: 1.2;
-}
-h1 {
-	font-size: 3.052em;
-}
-h2 {
-	font-size: 2.441em;
-}
-h3 {
-	font-size: 1.953em;
-}
-h4 {
-	font-size: 1.563em;
-}
-h5 {
-	font-size: 1.25em;
-}
-strong,
-b {
+	margin: 0 0 0.5rem;
+	font-family: var(--font-headline);
 	font-weight: 700;
+	line-height: 1.2;
+	color: var(--fg);
 }
+
 a {
 	color: var(--accent);
 }
-a:hover {
-	color: var(--accent);
+
+button {
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: inherit;
 }
-p {
-	margin-bottom: 1em;
-}
-.prose p {
-	margin-bottom: 2em;
-}
-textarea {
-	width: 100%;
-	font-size: 16px;
-}
-input {
-	font-size: 16px;
-}
-table {
-	width: 100%;
-}
+
 img {
 	max-width: 100%;
 	height: auto;
-	border-radius: 8px;
 }
+
+/* Author styles win over the UA stylesheet regardless of specificity, so any
+   component that sets `display` would stay visible while still marked hidden.
+   Several here do (the window and the graph HUD are both flex). */
+[hidden] {
+	display: none !important;
+}
+
+/* --- Organic frames ---------------------------------------------------
+   Nothing on this site is a perfectly square box. Every framed thing gets
+   eight different corner radii — four horizontal, four vertical — so it reads
+   as a rectangle someone drew rather than one a browser computed. The
+   distortion is deliberately small: these are still obviously rectangles,
+   just ones whose corners disagree with each other.
+
+   Each shape is a set of multipliers, so one definition works at any size:
+   the element sets `--o` to how far its corners should stray (a few px on a
+   chip, more on a photo) and picks a shape. Cycle the shapes across repeated
+   elements — `.organic-1` … `.organic-6` — so no two neighbours match. */
+
+.organic-1,
+.organic-2,
+.organic-3,
+.organic-4,
+.organic-5,
+.organic-6 {
+	/* Fallback for anything that forgets to set its own. */
+	--o: 8px;
+}
+
+.organic-1 {
+	border-radius: calc(var(--o) * 1.5) calc(var(--o) * 0.55) calc(var(--o) * 1.15)
+		calc(var(--o) * 0.8) / calc(var(--o) * 0.7) calc(var(--o) * 1.4) calc(var(--o) * 0.6)
+		calc(var(--o) * 1.25);
+}
+.organic-2 {
+	border-radius: calc(var(--o) * 0.6) calc(var(--o) * 1.35) calc(var(--o) * 0.75)
+		calc(var(--o) * 1.45) / calc(var(--o) * 1.3) calc(var(--o) * 0.65) calc(var(--o) * 1.5)
+		calc(var(--o) * 0.7);
+}
+.organic-3 {
+	border-radius: calc(var(--o) * 1.2) calc(var(--o) * 1.45) calc(var(--o) * 0.5)
+		calc(var(--o) * 0.9) / calc(var(--o) * 0.55) calc(var(--o) * 0.85) calc(var(--o) * 1.4)
+		calc(var(--o) * 1.15);
+}
+.organic-4 {
+	border-radius: calc(var(--o) * 0.85) calc(var(--o) * 0.6) calc(var(--o) * 1.5)
+		calc(var(--o) * 1.2) / calc(var(--o) * 1.45) calc(var(--o) * 1.1) calc(var(--o) * 0.65)
+		calc(var(--o) * 0.8);
+}
+.organic-5 {
+	border-radius: calc(var(--o) * 1.4) calc(var(--o) * 1.05) calc(var(--o) * 1.3)
+		calc(var(--o) * 0.55) / calc(var(--o) * 0.8) calc(var(--o) * 1.5) calc(var(--o) * 0.9)
+		calc(var(--o) * 1.35);
+}
+.organic-6 {
+	border-radius: calc(var(--o) * 0.7) calc(var(--o) * 1.25) calc(var(--o) * 0.95)
+		calc(var(--o) * 1.4) / calc(var(--o) * 1.2) calc(var(--o) * 0.6) calc(var(--o) * 1.45)
+		calc(var(--o) * 0.75);
+}
+
+
 code {
 	padding: 2px 5px;
-	background-color: rgb(var(--gray-light));
+	background: var(--surface);
 	border-radius: 2px;
 }
-pre {
-	padding: 1.5em;
-	border-radius: 8px;
-}
-pre > code {
-	all: unset;
-}
+
 blockquote {
-	border-left: 4px solid var(--accent);
-	padding: 0 0 0 20px;
-	margin: 0;
-	font-size: 1.333em;
+	border-left: 2px solid var(--accent);
+	padding-left: 1rem;
+	margin: 0 0 1.1rem;
 }
+
 hr {
 	border: none;
-	border-top: 1px solid rgb(var(--gray-light));
-}
-@media (max-width: 720px) {
-	body {
-		font-size: 18px;
-	}
-	main {
-		padding: 1em;
-	}
+	border-top: 1px solid var(--border);
+	margin: 2rem 0;
 }
 
 .sr-only {
-	border: 0;
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
 	padding: 0;
 	margin: 0;
-	position: absolute !important;
-	height: 1px;
-	width: 1px;
+	border: 0;
 	overflow: hidden;
-	/* IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box */
-	clip: rect(1px 1px 1px 1px);
-	/* maybe deprecated but we need to support legacy browsers */
 	clip: rect(1px, 1px, 1px, 1px);
-	/* modern browsers, clip-path works inwards from each corner */
 	clip-path: inset(50%);
-	/* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
 	white-space: nowrap;
 }
