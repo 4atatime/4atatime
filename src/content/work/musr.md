@@ -1,22 +1,36 @@
 ---
-title: "Musr"
-section: "UI/UX"
-tags: ["Design System", "Mobile App", "Start-up", "Client Work", "Figma", "Collab", "Music"]
+title: Musr
+section: UI/UX
+intro: Establishing a cohesive visual language and reusable component library to
+  ensure a consistent user experience.
 date: "2024"
 sortDate: 2024-01-01
-role: "UI Designer"
-location: "Haarlem, NL"
-tools: ["Figma","Design System","Documentation","Analytical","Startup","Collaborative"]
-status: "Design system in use."
-intro: "Establishing a cohesive visual language and reusable component library to ensure a consistent user experience."
-heroImage: "/src/assets/work/musr/hero.png"
+tags:
+  - Design System
+  - Mobile App
+  - Start-up
+  - Figma
+role: UI Designer
+location: Haarlem, NL
+tools:
+  - Figma
+  - Design System
+  - Documentation
+  - Analytical
+  - Startup
+  - Collaborative
+status: Design system in use.
+heroImage: /src/assets/work/musr/hero.png
 links:
-  - { label: "Musr", href: "https://musr.app/" }
+  - label: Musr
+    href: https://musr.app/
 gallery:
-  - src: "/src/assets/work/musr/at-a-glance.png"
+  - src: /src/assets/work/musr/at-a-glance.png
     title: "At a glance:"
-    caption: "For Musr, a social app connecting people through music tastes, I developed a comprehensive design system that transformed initial concepts into a cohesive product."
-    href: "https://musr.app/"
+    caption: For Musr, a social app connecting people through music tastes, I
+      developed a comprehensive design system that transformed initial concepts
+      into a cohesive product.
+    href: https://musr.app/
 ---
 ## At a glance
 
