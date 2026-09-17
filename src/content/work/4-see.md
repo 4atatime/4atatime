@@ -25,7 +25,7 @@ links:
     href: https://www.are.na/4-atatime/holy-cement
 gallery:
   - src: /src/assets/work/4-see/baku-9.jpg
-    caption: " Revisiting the socialist architecture in Baku, Azerbaijan. 2024."
+    caption: Revisiting the socialist architecture in Baku, Azerbaijan. 2024.
   - src: /src/assets/work/4-see/baku-18.jpg
   - src: /src/assets/work/4-see/baku-5.jpg
   - src: /src/assets/work/4-see/baku-14.jpg
