@@ -26,7 +26,7 @@ links:
     href: https://www.are.na/4-atatime/old-drawings
 gallery:
   - src: /src/assets/work/draws-crawls/the-world-is-my-pasta.jpg
-    title: the world is (my) pasta
+    title: the world is my pasta
   - src: /src/assets/work/draws-crawls/未來的主人翁.jpg
     title: 未來的主人翁 (The future protagonists)
   - src: /src/assets/work/draws-crawls/madhatter.jpg
