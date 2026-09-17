@@ -10,6 +10,13 @@
 */
 
 :root {
+	/* The page's one margin. Every fixed corner element — the legend, the
+	   lights/sound switches, the bottom bar — sits this far in, and the
+	   detail panel uses it as its inner padding, so the "About & Contact!"
+	   heading lands the same distance from its panel's corner as the logo
+	   does from the window's. Anything that sets its own inset instead is a
+	   bug waiting to be noticed. */
+	--edge: 1.6rem;
 	--radius: 8px;
 	--shadow:
 		0 2px 6px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.1), 0 16px 32px rgba(0, 0, 0, 0.1);
@@ -37,6 +44,12 @@
 	/* Hairlines in the notation styling. A touch darker than --border, which
 	   is tuned for filled edges: a 1px rule at --border all but disappears. */
 	--rule: #c3ced6;
+}
+
+@media (max-width: 720px) {
+	:root {
+		--edge: 1rem;
+	}
 }
 
 [data-theme='dark'] {

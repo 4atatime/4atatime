@@ -107,9 +107,13 @@ img {
 /* --- Organic frames ---------------------------------------------------
    Nothing on this site is a perfectly square box. Every framed thing gets
    eight different corner radii — four horizontal, four vertical — so it reads
-   as a rectangle someone drew rather than one a browser computed. The
-   distortion is deliberately small: these are still obviously rectangles,
-   just ones whose corners disagree with each other.
+   as a rectangle someone drew rather than one a browser computed.
+
+   The multipliers run from 0.35 to 2.4, which is a wide enough spread that
+   opposite corners of the same box visibly disagree: a corner can be nearly
+   sharp while the one across from it is a generous curve. That's the point —
+   an even radius reads as a computed rectangle no matter how large it is,
+   and only the disagreement reads as a drawn one.
 
    Each shape is a set of multipliers, so one definition works at any size:
    the element sets `--o` to how far its corners should stray (a few px on a
@@ -127,36 +131,35 @@ img {
 }
 
 .organic-1 {
-	border-radius: calc(var(--o) * 1.5) calc(var(--o) * 0.55) calc(var(--o) * 1.15)
-		calc(var(--o) * 0.8) / calc(var(--o) * 0.7) calc(var(--o) * 1.4) calc(var(--o) * 0.6)
-		calc(var(--o) * 1.25);
+	border-radius: calc(var(--o) * 2.3) calc(var(--o) * 0.4) calc(var(--o) * 1.6)
+		calc(var(--o) * 0.85) / calc(var(--o) * 0.55) calc(var(--o) * 2.1) calc(var(--o) * 0.45)
+		calc(var(--o) * 1.75);
 }
 .organic-2 {
-	border-radius: calc(var(--o) * 0.6) calc(var(--o) * 1.35) calc(var(--o) * 0.75)
-		calc(var(--o) * 1.45) / calc(var(--o) * 1.3) calc(var(--o) * 0.65) calc(var(--o) * 1.5)
-		calc(var(--o) * 0.7);
+	border-radius: calc(var(--o) * 0.45) calc(var(--o) * 1.9) calc(var(--o) * 0.6)
+		calc(var(--o) * 2.35) / calc(var(--o) * 1.85) calc(var(--o) * 0.5) calc(var(--o) * 2.2)
+		calc(var(--o) * 0.55);
 }
 .organic-3 {
-	border-radius: calc(var(--o) * 1.2) calc(var(--o) * 1.45) calc(var(--o) * 0.5)
-		calc(var(--o) * 0.9) / calc(var(--o) * 0.55) calc(var(--o) * 0.85) calc(var(--o) * 1.4)
-		calc(var(--o) * 1.15);
+	border-radius: calc(var(--o) * 1.55) calc(var(--o) * 2.4) calc(var(--o) * 0.35)
+		calc(var(--o) * 1.05) / calc(var(--o) * 0.4) calc(var(--o) * 0.9) calc(var(--o) * 2.05)
+		calc(var(--o) * 1.5);
 }
 .organic-4 {
-	border-radius: calc(var(--o) * 0.85) calc(var(--o) * 0.6) calc(var(--o) * 1.5)
-		calc(var(--o) * 1.2) / calc(var(--o) * 1.45) calc(var(--o) * 1.1) calc(var(--o) * 0.65)
+	border-radius: calc(var(--o) * 0.9) calc(var(--o) * 0.45) calc(var(--o) * 2.25)
+		calc(var(--o) * 1.7) / calc(var(--o) * 2.15) calc(var(--o) * 1.35) calc(var(--o) * 0.5)
 		calc(var(--o) * 0.8);
 }
 .organic-5 {
-	border-radius: calc(var(--o) * 1.4) calc(var(--o) * 1.05) calc(var(--o) * 1.3)
-		calc(var(--o) * 0.55) / calc(var(--o) * 0.8) calc(var(--o) * 1.5) calc(var(--o) * 0.9)
-		calc(var(--o) * 1.35);
+	border-radius: calc(var(--o) * 2.1) calc(var(--o) * 1.15) calc(var(--o) * 1.8)
+		calc(var(--o) * 0.4) / calc(var(--o) * 0.85) calc(var(--o) * 2.3) calc(var(--o) * 0.95)
+		calc(var(--o) * 1.95);
 }
 .organic-6 {
-	border-radius: calc(var(--o) * 0.7) calc(var(--o) * 1.25) calc(var(--o) * 0.95)
-		calc(var(--o) * 1.4) / calc(var(--o) * 1.2) calc(var(--o) * 0.6) calc(var(--o) * 1.45)
+	border-radius: calc(var(--o) * 0.5) calc(var(--o) * 1.45) calc(var(--o) * 1.0)
+		calc(var(--o) * 2.2) / calc(var(--o) * 1.6) calc(var(--o) * 0.42) calc(var(--o) * 2.35)
 		calc(var(--o) * 0.75);
 }
-
 
 code {
 	padding: 2px 5px;

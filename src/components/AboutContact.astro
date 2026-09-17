@@ -54,8 +54,12 @@ const { Content } = await render(about);
 		max-width: 52ch;
 	}
 
+	/* No top padding: the panel body's own --edge inset already puts this the
+	   same distance from the corner as the logo is from the window's, which is
+	   the whole point. The right gutter is the close button's clearance — the
+	   tagline is wide enough to run under it otherwise. */
 	.head {
-		padding: 2.5rem 0 1.6rem;
+		padding: 0 2.75rem 1.6rem 0;
 	}
 	.tagline {
 		margin: 0 0 0.9rem;

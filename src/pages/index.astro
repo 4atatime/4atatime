@@ -65,13 +65,13 @@ const byId = new Map(items.map((item) => [item.id, item]));
 				position: fixed;
 				left: 0;
 				right: 0;
-				bottom: 32px;
+				bottom: var(--edge);
 				z-index: 50;
 				display: flex;
 				align-items: center;
 				justify-content: space-between;
 				gap: 1.5rem;
-				padding: 0 40px;
+				padding: 0 var(--edge);
 				/* The bar spans the viewport, so it must not intercept drags meant
 				   for the graph — only its actual links do. */
 				pointer-events: none;
@@ -79,8 +79,6 @@ const byId = new Map(items.map((item) => [item.id, item]));
 
 			@media (max-width: 720px) {
 				.bottom-bar {
-					bottom: 20px;
-					padding: 0 20px;
 					gap: 1rem;
 				}
 			}

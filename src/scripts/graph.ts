@@ -77,14 +77,20 @@ const LABEL_PADDING = 5;
  * desktop the legend is a column down the left; on a phone it's a block across
  * the top and the nav button sits along the bottom, so the graph's frame is
  * inset from a different side depending on which layout is in play.
+ *
+ * The phone insets are measured off the real elements rather than guessed as a
+ * fraction of the viewport — the legend's height depends on how many lines the
+ * greeting wraps to and how many categories there are, neither of which a
+ * magic percentage can know about.
  */
 const DESKTOP_FROM = 721;
 const LEGEND_GUTTER = 0.2;
 const LEGEND_GUTTER_MAX = 240;
-/** Phone: the legend's block at the top, and the nav button's strip below. */
-const MOBILE_TOP_GUTTER = 0.3;
-const MOBILE_TOP_GUTTER_MAX = 300;
-const MOBILE_BOTTOM_GUTTER = 90;
+/** Breathing room between the chrome and the nearest work. */
+const CHROME_CLEARANCE = 14;
+/** Used only until the real elements have been measured. */
+const MOBILE_TOP_FALLBACK = 200;
+const MOBILE_BOTTOM_FALLBACK = 90;
 const IDLE_SPIN = 0.0004; // radians/frame; stops the moment you touch it
 const IDLE_RESUME_MS = 2600;
 const MIN_ZOOM = 0.35;
@@ -272,6 +278,26 @@ export function initGraph() {
 	let width = 0;
 	let height = 0;
 
+	/** How much of the top and bottom edges the chrome is covering, in px. */
+	let chromeTop = MOBILE_TOP_FALLBACK;
+	let chromeBottom = MOBILE_BOTTOM_FALLBACK;
+
+	/**
+	 * Measures the legend and the bottom bar so the graph can be framed in
+	 * what's actually left. Called from resize() only — these are layout reads
+	 * and have no business in the render loop.
+	 */
+	function measureChrome() {
+		const legend = document.querySelector('.station');
+		const bar = document.querySelector('.bottom-bar');
+		chromeTop = legend
+			? legend.getBoundingClientRect().bottom + CHROME_CLEARANCE
+			: MOBILE_TOP_FALLBACK;
+		chromeBottom = bar
+			? Math.max(0, height - bar.getBoundingClientRect().top) + CHROME_CLEARANCE
+			: MOBILE_BOTTOM_FALLBACK;
+	}
+
 	function resize() {
 		const rect = canvas.getBoundingClientRect();
 		const ratio = window.devicePixelRatio || 1;
@@ -280,6 +306,7 @@ export function initGraph() {
 		canvas.width = Math.round(width * ratio);
 		canvas.height = Math.round(height * ratio);
 		ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+		measureChrome();
 	}
 
 	function fitScale() {
@@ -295,8 +322,8 @@ export function initGraph() {
 	function viewFrame() {
 		const desktop = width >= DESKTOP_FROM;
 		const left = desktop ? Math.min(width * LEGEND_GUTTER, LEGEND_GUTTER_MAX) : 0;
-		const top = desktop ? 0 : Math.min(height * MOBILE_TOP_GUTTER, MOBILE_TOP_GUTTER_MAX);
-		const bottom = desktop ? 0 : MOBILE_BOTTOM_GUTTER;
+		const top = desktop ? 0 : chromeTop;
+		const bottom = desktop ? 0 : chromeBottom;
 		return {
 			cx: left + (width - left) / 2,
 			cy: top + (height - top - bottom) / 2,
@@ -395,6 +422,16 @@ export function initGraph() {
 	let pointerId: number | null = null;
 	/** True while the pointer is inside the HUD, which keeps it open and still. */
 	let hudPinned = false;
+	/**
+	 * Every finger currently down on the canvas. A phone has no wheel, so two
+	 * fingers pinching is the only way to zoom; tracking them all here is what
+	 * lets one finger keep meaning "turn the field" without the two gestures
+	 * fighting each other.
+	 */
+	const touches = new Map<number, { x: number; y: number }>();
+	/** Set when a second finger lands: the span and zoom to scale from. */
+	let pinchStartSpan = 0;
+	let pinchStartZoom = 1;
 	// Measured once per content change rather than per frame: the box only
 	// changes size when a different work goes into it, and reading offsetWidth
 	// inside the render loop would force a layout every frame.
@@ -439,7 +476,27 @@ export function initGraph() {
 	}
 
 	function open(index: number) {
+		// On a phone the preview is a sheet at the bottom of the screen and the
+		// detail panel slides up over it. Leaving the sheet behind means
+		// closing the panel drops you back onto a preview of the thing you just
+		// closed; dropping it here returns you to the field instead.
+		if (width < DESKTOP_FROM) {
+			hovered = null;
+			hudPinned = false;
+			updateHud();
+		}
 		location.hash = `#work/${nodes[index].id}`;
+	}
+
+	/** Distance between the first two fingers down, in screen pixels. */
+	function touchSpan(): number {
+		const [a, b] = [...touches.values()];
+		return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0;
+	}
+
+	/** True while two or more fingers are down — a pinch, not a drag. */
+	function pinching(): boolean {
+		return touches.size >= 2;
 	}
 
 	// --- HUD --------------------------------------------------------------
@@ -470,12 +527,22 @@ export function initGraph() {
 			`<span class="hud-title">${escapeHtml(node.title)}</span>` +
 			`<span class="hud-rows">${rows.join('')}</span>` +
 			`<button type="button" class="hud-cta" data-hud-open>Open the file →</button>`;
+		if (width < DESKTOP_FROM) {
+			// Drop any anchor the desktop layout left behind, so the sheet's own
+			// left/right/bottom rules are what position it.
+			hud.style.removeProperty('left');
+			hud.style.removeProperty('top');
+			hud.classList.remove('below');
+		}
 		hudSize = { width: hud.offsetWidth, height: hud.offsetHeight };
 		positionHud();
 	}
 
 	/** Cheap per-frame follow, so the HUD tracks its node as the graph turns. */
 	function positionHud() {
+		// On a phone the preview is a sheet pinned to the bottom edge by CSS —
+		// following the node is exactly what used to bury it under the legend.
+		if (width < DESKTOP_FROM) return;
 		// Frozen while the pointer is inside it: a box that drifts out from under
 		// the cursor is impossible to click.
 		if (hovered === null || hudPinned) return;
@@ -755,10 +822,25 @@ export function initGraph() {
 	// --- Pointer ----------------------------------------------------------
 	canvas.addEventListener('pointerdown', (event) => {
 		if (event.button !== 0) return;
+		touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+		lastInteraction = performance.now();
+
+		// A second finger turns whatever was happening into a pinch. Whatever
+		// the first finger had grabbed is let go, so the graph doesn't orbit
+		// wildly while the two fingers spread.
+		if (pinching()) {
+			pinchStartSpan = touchSpan();
+			pinchStartZoom = zoomTarget;
+			autoFit = false;
+			orbiting = false;
+			dragNode = null;
+			pointerId = null;
+			return;
+		}
+
 		pointerId = event.pointerId;
 		pointerMoved = false;
 		pointerStart = { x: event.clientX, y: event.clientY };
-		lastInteraction = performance.now();
 		const hit = nodeAt(event.clientX, event.clientY);
 		if (hit !== null) {
 			dragNode = hit;
@@ -770,6 +852,22 @@ export function initGraph() {
 
 	canvas.addEventListener('pointermove', (event) => {
 		lastInteraction = performance.now();
+
+		if (touches.has(event.pointerId)) {
+			touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+		}
+
+		// Two fingers: zoom around the span between them, and nothing else.
+		if (pinching()) {
+			const span = touchSpan();
+			if (pinchStartSpan > 0 && span > 0) {
+				zoomTarget = Math.max(
+					MIN_ZOOM,
+					Math.min(MAX_ZOOM, (pinchStartZoom * span) / pinchStartSpan),
+				);
+			}
+			return;
+		}
 
 		if (pointerId === event.pointerId && (orbiting || dragNode !== null)) {
 			const dx = event.clientX - pointerStart.x;
@@ -814,6 +912,18 @@ export function initGraph() {
 	});
 
 	function endPointer(event: PointerEvent) {
+		const wasPinching = pinching();
+		touches.delete(event.pointerId);
+
+		// Lifting one finger out of a pinch shouldn't be read as a tap, and
+		// shouldn't hand the remaining finger a half-finished orbit either.
+		if (wasPinching) {
+			pinchStartSpan = touchSpan();
+			pinchStartZoom = zoomTarget;
+			pointerMoved = true;
+			return;
+		}
+
 		if (pointerId !== event.pointerId) return;
 		const wasDragNode = dragNode;
 		orbiting = false;

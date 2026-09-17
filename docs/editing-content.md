@@ -143,10 +143,10 @@ You can only pick from the dropdown. That's deliberate: a free-text field
 collects "Illustration", "illustration" and "Illustrations" within a month, and
 to the graph those are three unrelated things.
 
-**To add a new tag**, it has to go in two places — `src/lib/tags.ts` and
-nowhere else, because the editor's dropdown is generated from that file at
-request time. That's still a code change, so either ask whoever maintains the
-site or edit that one file on GitHub directly.
+**To add a new tag**, it goes in exactly one place — `src/lib/tags.ts` — because
+the editor's dropdown is generated from that file at request time, not
+transcribed into the CMS config by hand. That's still a code change, so either
+ask whoever maintains the site or edit that one file on GitHub directly.
 
 ---
 

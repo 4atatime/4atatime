@@ -7,7 +7,7 @@
 export const SITE_TITLE = '4atatime';
 
 /** The blurb under a shared link, and the page's meta description. */
-export const SITE_DESCRIPTION = '— a reasonable amount of trouble —';
+export const SITE_DESCRIPTION = ': a reasonable amount of trouble :';
 
 /** The hello in the top-left corner. Not metadata; just the welcome. */
 export const SITE_GREETING = "Halöòóõ! You're now at Lexie's web garden <3";

@@ -19,6 +19,7 @@ import type { CollectionEntry } from 'astro:content';
 import { render } from 'astro:content';
 import { Image } from 'astro:assets';
 import { categoryOf } from '../lib/categories';
+import { workSerial } from '../lib/serial';
 
 interface Props {
 	item: CollectionEntry<'work'>;
@@ -31,9 +32,9 @@ const { title, section, tags, date, status, link, intro, heroImage, role, locati
 
 const category = categoryOf(section);
 
-// The sheet number is cosmetic, but it should be stable per work rather than
-// random, so it's derived from the id.
-const sheet = [...item.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 9000, 7) + 1000;
+// Category, year, and two opaque characters — see ../lib/serial.ts. Stable
+// per work, and it groups the way the collection does.
+const sheet = workSerial(item.id, section, item.data.sortDate);
 
 // Every metadata row that this particular work actually has. Rendering an
 // empty "SITE — " row would undercut the whole conceit that these are
@@ -181,7 +182,7 @@ const readings: { key: string; value: string }[] = [
 		gap: 1.1rem;
 		/* Deliberately generous: the drop before the title is what makes the
 		   page feel like a printed sheet rather than a dialog. */
-		padding: 2.5rem 0 1.9rem;
+		padding: 4rem 0 1.9rem;
 		border-bottom: 1px solid var(--rule);
 	}
 
@@ -274,10 +275,10 @@ const readings: { key: string; value: string }[] = [
 
 	.intro {
 		margin: 0 0 1.6rem;
-		max-width: 46ch;
-		font-size: 1rem;
-		line-height: 1.55;
-		color: var(--fg);
+		max-width: 52ch;
+		font-size: 0.86rem;
+		line-height: 1.6;
+		color: var(--muted);
 	}
 
 	/* Keyed readings with dotted leaders, as on a legend. */
@@ -367,9 +368,11 @@ const readings: { key: string; value: string }[] = [
 		height: auto;
 		margin: 1.4rem 0;
 		border: 1px solid var(--rule);
-		border-radius: calc(var(--o) * 1.5) calc(var(--o) * 0.55) calc(var(--o) * 1.15)
-			calc(var(--o) * 0.8) / calc(var(--o) * 0.7) calc(var(--o) * 1.4) calc(var(--o) * 0.6)
-			calc(var(--o) * 1.25);
+		/* Shape 4 — images inside the markdown body can't be given a class, so
+		   the multipliers are repeated here rather than imported. */
+		border-radius: calc(var(--o) * 0.9) calc(var(--o) * 0.45) calc(var(--o) * 2.25)
+			calc(var(--o) * 1.7) / calc(var(--o) * 2.15) calc(var(--o) * 1.35)
+			calc(var(--o) * 0.5) calc(var(--o) * 0.8);
 	}
 	.body :global(ul) {
 		padding-left: 1.1rem;
@@ -501,7 +504,7 @@ const readings: { key: string; value: string }[] = [
 	}
 	:global(#detail-window[data-size='wide']) .slip {
 		gap: 1.8rem;
-		padding-top: 3.4rem;
+		padding-top: 5rem;
 	}
 	/* Dragged out wide, the extra room goes to the plate grid — and only to
 	   the plate grid. A hero photo or a metadata table stretched across 1700px
@@ -525,7 +528,7 @@ const readings: { key: string; value: string }[] = [
 		display: none;
 	}
 	:global(#detail-window[data-size='narrow']) .slip {
-		padding-top: 1.9rem;
+		padding-top: 2.4rem;
 	}
 	:global(#detail-window[data-size='narrow']) h1 {
 		font-size: 1.8rem;

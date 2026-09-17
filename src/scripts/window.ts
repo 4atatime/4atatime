@@ -17,6 +17,8 @@ const DESKTOP_QUERY = '(min-width: 721px)';
 const SIZE_KEY = 'window-size';
 const MIN_WIDTH = 320;
 const MIN_HEIGHT = 220;
+/** Matches the slide transition in DetailWindow.astro. */
+const CLOSE_MS = 300;
 
 /**
  * Breakpoints for the panel itself rather than the viewport. Container
@@ -101,26 +103,54 @@ export function initWindow() {
 		root.dataset.size = sizeStep(root.getBoundingClientRect().width);
 	}
 
+	/** Pending teardown after a close animation, so a fast reopen can cancel it. */
+	let closingTimer: number | undefined;
+
 	function open(fragment: DocumentFragment) {
+		// A close may still be sliding out; cancel it rather than let it strip
+		// the content we're about to show.
+		window.clearTimeout(closingTimer);
+		closingTimer = undefined;
+		root.classList.remove('closing');
+
 		body.replaceChildren(fragment);
 		body.scrollTop = 0;
 		if (root.hidden) {
 			lastFocused = document.activeElement;
 			root.hidden = false;
-			// Let the element paint at its start state before the transition.
-			requestAnimationFrame(() => root.classList.add('open'));
+			// Two frames, not one. `hidden` is display:none, and an element
+			// going from display:none straight to its end state in the same
+			// frame has no start state to transition *from* — which is why the
+			// panel used to appear rather than slide. The first frame lets it
+			// lay out off-screen; the second starts the move.
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => root.classList.add('open'));
+			});
 		}
 		publishSize();
 		closeBtn.focus();
 	}
 
 	function close() {
-		if (root.hidden) return;
+		if (root.hidden || closingTimer !== undefined) return;
+
+		// Let it slide back out before it's taken away. The class drives the
+		// transform; the timer is what actually removes the element, and it's
+		// deliberately a timer rather than a transitionend listener — a
+		// transition that never runs (reduced motion, a backgrounded tab)
+		// fires no event and would strand the panel open forever.
 		root.classList.remove('open');
-		root.hidden = true;
-		body.replaceChildren();
+		root.classList.add('closing');
+
 		if (lastFocused instanceof HTMLElement) lastFocused.focus();
 		lastFocused = null;
+
+		closingTimer = window.setTimeout(() => {
+			closingTimer = undefined;
+			root.classList.remove('closing');
+			root.hidden = true;
+			body.replaceChildren();
+		}, CLOSE_MS);
 	}
 
 	function sync() {

@@ -63,19 +63,23 @@
 		}
 	}
 
-	/* Mobile: bottom sheet over most of the screen. */
+	/* Mobile: a sheet that rises over everything, including the preview sheet
+	   it was opened from. It stops a hair short of the top so there's still
+	   something behind it to tap, and so the drag handle reads as a handle. */
 	@media (max-width: 720px) {
 		.window {
 			left: 0;
 			right: 0;
 			bottom: 0;
-			height: var(--window-height, 88vh);
+			height: var(--window-height, calc(100dvh - 1.5rem));
 			min-height: 220px;
-			max-height: calc(100vh - 24px);
+			max-height: calc(100dvh - 1.5rem);
 			border-top: 1px solid var(--border);
-			border-radius: 14px 14px 0 0;
+			--o: 20px;
+			border-radius: calc(var(--o) * 1.9) calc(var(--o) * 0.75) 0 0 /
+				calc(var(--o) * 1.1) calc(var(--o) * 1.7) 0 0;
 			transform: translateY(100%);
-			transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+			transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
 		}
 		.resizer {
 			top: 0;
@@ -95,6 +99,18 @@
 
 	.window.open {
 		transform: none;
+	}
+	/* Sliding back out. Without this the panel keeps .open's `transform: none`
+	   until it's hidden outright, which is no animation at all — the media
+	   blocks above already define where "out" is, so this only has to stop
+	   .open winning. */
+	.window.closing {
+		transform: translateX(100%);
+	}
+	@media (max-width: 720px) {
+		.window.closing {
+			transform: translateY(100%);
+		}
 	}
 	/* Suppress the slide transition mid-drag so resizing tracks the pointer. */
 	.window.resizing {
@@ -120,8 +136,8 @@
 
 	.close {
 		position: absolute;
-		top: 0.9rem;
-		right: 0.9rem;
+		top: var(--edge);
+		right: var(--edge);
 		z-index: 3;
 		width: 30px;
 		height: 30px;
@@ -151,11 +167,17 @@
 		stroke-linecap: round;
 	}
 
+	/* The same inset the page uses at its own corners, so a panel heading sits
+	   the same distance from the panel's edge as the logo does from the
+	   window's. Content that wants a bigger drop (a work's survey slip) adds
+	   its own padding on top of this rather than this one being generous for
+	   everybody. */
 	.body {
 		flex: 1;
 		overflow-y: auto;
 		overscroll-behavior: contain;
-		padding: 3.2rem clamp(1.25rem, 4vw, 3rem) clamp(2rem, 6vw, 4rem);
+		padding: var(--edge);
+		padding-bottom: calc(var(--edge) * 2.5);
 	}
 
 	@media (prefers-reduced-motion: reduce) {
