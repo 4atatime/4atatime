@@ -7,9 +7,10 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "node scripts/check-images.mjs && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check:images": "node scripts/check-images.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^8.0.1",

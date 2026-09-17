@@ -25,7 +25,7 @@ links:
   - label: Are.na — old drawings
     href: https://www.are.na/4-atatime/old-drawings
 gallery:
-  - src: /src/assets/work/draws-crawls/未命名作品-3-.jpg
+  - src: /src/assets/work/draws-crawls/the-world-is-my-pasta.jpg
     title: the world is (my) pasta
   - src: /src/assets/work/draws-crawls/未來的主人翁.jpg
     title: 未來的主人翁 (The future protagonists)
