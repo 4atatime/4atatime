@@ -28,5 +28,18 @@ gallery:
   - src: /src/assets/work/draws-crawls/未命名作品-3-.jpg
     title: the world is (my) pasta
   - src: /src/assets/work/draws-crawls/未來的主人翁.jpg
+    title: 未來的主人翁 (The future protagonists)
+  - src: /src/assets/work/draws-crawls/madhatter.jpg
+    title: mad hatter
+  - src: /src/assets/work/draws-crawls/man-in-yellow-jacket.jpg
+    title: man in yellow jacket
+  - src: /src/assets/work/draws-crawls/untitled_artwork-3.jpg
+    title: minimorphosis, or fellshish
+  - src: /src/assets/work/draws-crawls/untitled_artwork-2.jpg
+    title: the squidilly squidman
+  - src: /src/assets/work/draws-crawls/img_7468.png
+    title: penguin mecha
 ---
-There's more stored on Are.na.
+Cringe but hey everyone had an emo era! 
+
+More in the link above.
