@@ -25,7 +25,7 @@ links:
     href: https://www.are.na/4-atatime/holy-cement
 gallery:
   - src: /src/assets/work/4-see/baku-9.jpg
-    caption: " Revisiting the socialist architecture in Baku, Azerbaijan."
+    caption: " Revisiting the socialist architecture in Baku, Azerbaijan. 2024."
   - src: /src/assets/work/4-see/baku-18.jpg
   - src: /src/assets/work/4-see/baku-5.jpg
   - src: /src/assets/work/4-see/baku-14.jpg
@@ -37,10 +37,12 @@ gallery:
   - src: /src/assets/work/4-see/sany0090.jpg
   - src: /src/assets/work/4-see/baku-1.jpg
   - src: /src/assets/work/4-see/sany0596.jpg
+    caption: Shipai, Guangzhou, China. 2025
+  - src: /src/assets/work/4-see/sany0595.jpg
+    caption: ""
+  - src: /src/assets/work/4-see/sany0598.jpg
+  - src: /src/assets/work/4-see/shanghai-1.jpg
+    caption: Shanghai, China. 2024
+  - src: /src/assets/work/4-see/shanghai-2.jpg
+  - src: /src/assets/work/4-see/shanghai-3.jpg
 ---
-Shot on a Sanyo Xacti — paths and chances taken.
-
-*Curved dust, ivory cement* is the strand within it that revisits the socialist
-architecture of Baku, Azerbaijan.
-
-Moving image and stills; the full set lives on Are.na.
