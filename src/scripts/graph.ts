@@ -54,6 +54,11 @@ interface SimNode extends RawNode, Body {
 	glow: number;
 	/** Eased filter membership, 1 = in the current category, 0 = filtered out. */
 	shown: number;
+	/** Projected position for the title, which damps the idle drift. */
+	lx: number;
+	ly: number;
+	/** Eased 0 → 1 as the title wins or loses its space, so it never blinks. */
+	labelFade: number;
 }
 
 // --- Camera ---------------------------------------------------------------
@@ -64,12 +69,19 @@ const CAMERA_DISTANCE = 900;
 /**
  * Base scale: how many world units map onto the viewport's short axis before
  * zoom. A fixed number can't fill both a 21:9 desktop and a tall phone, so
- * this only sets the ballpark — fitToView() below measures the cloud as it
- * actually projects and picks the zoom that frames it.
+ * this only sets the ballpark — frameNodes() below measures the works as they
+ * actually project and picks the zoom that frames them.
  */
 const FIT_BASIS = 2000;
-/** How much of the viewport the cloud should span when first framed. */
+/** How much of the viewport the whole cloud should span when first framed. */
 const FIT_TARGET = 0.92;
+/**
+ * The same, for a single category. Deliberately looser: a category of three
+ * filled 92% of the frame and read as "zoomed into three dots" rather than as
+ * a selection made within a larger field. Leaving room around it keeps the
+ * rest of the garden in shot, which is what makes the filter legible.
+ */
+const FOCUS_TARGET = 0.58;
 /** Breathing room around a label before it counts as colliding. */
 const LABEL_PADDING = 5;
 /**
@@ -97,6 +109,9 @@ const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 3;
 /** How much of the remaining distance the camera closes each frame. */
 const CAMERA_EASE = 0.09;
+/** The three-quarter view everything falls back to. */
+const DEFAULT_YAW = 0.4;
+const DEFAULT_PITCH = -0.25;
 
 /**
  * Floor on the node-size multiplier. Without it a phone drew desktop-sized
@@ -135,11 +150,13 @@ const NODE_ALPHA_FLOOR = 0.68;
 const NODE_ALPHA_RANGE = 0.32;
 /** What a node drops to when something else is hovered. */
 const NODE_DIMMED = 0.34;
-/** The same pair for edges. */
-const LINK_DEPTH_FADE = 0.22;
-const LINK_ALPHA = 0.95;
+/** The same pair for edges, which stay deliberately quieter than the discs:
+ * ~40% of a node's contrast up close, ~80% at the far end where everything is
+ * fighting to be seen. Visible as structure, never competing with the works. */
+const LINK_DEPTH_FADE = 0.18;
+const LINK_ALPHA = 1;
 /** Edges keep most of their weight at the far end, or the web comes apart. */
-const LINK_NEAR_FLOOR = 0.78;
+const LINK_NEAR_FLOOR = 0.82;
 /** Edge alpha while something is hovered: the quiet state, and the lit one. */
 const LINK_ALPHA_DIMMED = 0.18;
 const LINK_ALPHA_LIT = 0.7;
@@ -148,13 +165,40 @@ const LABEL_DEPTH_FADE = 0.28;
 const LABEL_ALPHA_FLOOR = 0.62;
 const LABEL_ALPHA_RANGE = 0.38;
 
+// --- Titles ---------------------------------------------------------------
+// Which works are named is decided per node, by how big that node is actually
+// drawn — not by one global "is the whole graph zoomed in enough" test. That
+// test was a desktop measurement in disguise: the same default framing scores
+// 0.72 on a laptop and 0.19 on a phone, so a phone showed no titles at all
+// until you had zoomed most of the way in, and the field arrived looking like
+// abstract dots rather than an index of work.
+//
+// Tied to radius instead, the rule reads the way you'd expect it to: the
+// circles nearest the front are named, zooming in names more, zooming out
+// names fewer. At the default framing that's every work on a desktop and the
+// closest dozen on a phone, which collision-culling then thins further.
+/** A circle has to be drawn at least this wide to be worth naming. */
+const LABEL_MIN_RADIUS = 6;
+/** Titles stop growing here. Past it they collide faster than they inform. */
+const LABEL_MAX_SIZE = 17;
+const LABEL_MIN_SIZE = 10;
+/**
+ * How much of a node's idle drift its title copies. The circles should float;
+ * the titles going with them at full amplitude read as trembling rather than
+ * as motion — text shows up sub-pixel movement that a soft-edged circle hides.
+ */
+const LABEL_DRIFT_DAMPING = 0.3;
+/** How fast a title fades in or out when it wins or loses its space. */
+const LABEL_FADE_EASE = 0.12;
+
 /** How much of the gap a node's highlight closes each frame. */
 const GLOW_EASE = 0.16;
 /** Same easing for the filter fade — slower, because it's a bigger change. */
 const FILTER_EASE = 0.09;
-/** A filtered-out work stays faintly visible rather than vanishing, so the
- * shape of the whole garden is never lost. */
-const FILTERED_ALPHA = 0.12;
+/** A filtered-out work stays visible rather than vanishing, so the shape of
+ * the whole garden is never lost — and so the selection reads as *these,
+ * among all of those*, which needs the others to still be there. */
+const FILTERED_ALPHA = 0.3;
 /** Grace period before an un-hovered node lets go, so the HUD is reachable. */
 const HOVER_HOLD_MS = 140;
 /** Clearance between the preview box and its node, and from the window edge. */
@@ -274,6 +318,9 @@ export function initGraph() {
 		phase: random() * Math.PI * 2,
 		glow: 0,
 		shown: 1,
+		lx: 0,
+		ly: 0,
+		labelFade: 0,
 	}));
 	const links = data.links;
 
@@ -300,17 +347,20 @@ export function initGraph() {
 	// --- Camera state -----------------------------------------------------
 	// Each of these has a target the camera eases toward; dragging moves the
 	// target, never the camera, which is what takes the rigidity out.
-	let yaw = 0.4;
+	let yaw = DEFAULT_YAW;
 	let yawTarget = yaw;
-	let pitch = -0.25;
+	let pitch = DEFAULT_PITCH;
 	let pitchTarget = pitch;
 	let zoom = 1;
 	let zoomTarget = zoom;
 	/** Cleared the moment someone zooms themselves — then the frame is theirs. */
 	let autoFit = true;
-	/** The cloud's own centre, in unzoomed screen units. */
+	/** The point the camera is centred on, in unzoomed screen units. */
 	let panX = 0;
 	let panY = 0;
+	/** Where it's heading. Eased, so selecting a category flies rather than cuts. */
+	let panXTarget = 0;
+	let panYTarget = 0;
 	let clock = 0;
 	let lastInteraction = 0;
 	let width = 0;
@@ -378,73 +428,215 @@ export function initGraph() {
 	 * that fills the frame, which also means it adapts to a phone, an ultrawide
 	 * and a window being dragged about.
 	 */
-	function fitToView() {
-		if (!width || !height) return;
-		const view = viewFrame();
+	/**
+	 * Where a node lands at an arbitrary angle, before zoom and pan. Used to
+	 * try out camera angles without disturbing the one on screen.
+	 */
+	function projectAt(node: SimNode, atYaw: number, atPitch: number) {
+		const cy = Math.cos(atYaw);
+		const sy = Math.sin(atYaw);
+		const cp = Math.cos(atPitch);
+		const sp = Math.sin(atPitch);
+		const x1 = node.x * cy + node.z * sy;
+		const z1 = -node.x * sy + node.z * cy;
+		const y2 = node.y * cp - z1 * sp;
+		const z2 = node.y * sp + z1 * cp;
+		const depth = CAMERA_DISTANCE / Math.max(200, CAMERA_DISTANCE - z2);
+		const fit = fitScale();
+		return { x: x1 * depth * fit, y: y2 * depth * fit, depth };
+	}
 
-		// Measure the cloud's projected bounding box in unzoomed units. Undo
-		// the current zoom and pan so the measurement describes the cloud
-		// rather than the view we happen to be looking at it through.
+	/**
+	 * The angle that shows a set of works most clearly: the one where they
+	 * spread furthest apart relative to the room they take up, so nothing sits
+	 * behind anything else and every title has somewhere to go.
+	 *
+	 * Derived rather than hand-picked per category. The layout is deterministic
+	 * — same seed, same positions every load — so each category resolves to its
+	 * own stable angle that behaves like an authored viewpoint, except it stays
+	 * correct when a work is added or removed in the CMS, which a hard-coded
+	 * pair of numbers would not.
+	 */
+	function bestAngleFor(members: SimNode[]) {
+		// One work has no spread to optimise; give it the default three-quarter
+		// view rather than an arbitrary winner.
+		if (members.length < 2) return { yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH };
+
+		let best = { yaw: DEFAULT_YAW, pitch: DEFAULT_PITCH, score: -Infinity };
+		for (let y = 0; y < Math.PI * 2; y += Math.PI / 12) {
+			for (let p = -0.9; p <= 0.9; p += 0.3) {
+				const pts = members.map((n) => projectAt(n, y, p));
+				let minX = Infinity;
+				let maxX = -Infinity;
+				let minY = Infinity;
+				let maxY = -Infinity;
+				for (const pt of pts) {
+					minX = Math.min(minX, pt.x);
+					maxX = Math.max(maxX, pt.x);
+					minY = Math.min(minY, pt.y);
+					maxY = Math.max(maxY, pt.y);
+				}
+				// Normalise by the box they occupy, so the score rewards even
+				// spacing rather than simply being far from the camera.
+				const span = Math.max(maxX - minX, maxY - minY) || 1;
+				let tightest = Infinity;
+				for (let i = 0; i < pts.length; i++) {
+					for (let j = i + 1; j < pts.length; j++) {
+						tightest = Math.min(tightest, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
+					}
+				}
+				const score = tightest / span;
+				if (score > best.score) best = { yaw: y, pitch: p, score };
+			}
+		}
+		return { yaw: best.yaw, pitch: best.pitch };
+	}
+
+	/**
+	 * Frames a set of works: centres the camera on them and picks the zoom that
+	 * fills whatever room the chrome has left. Angle is decided separately by
+	 * the caller, because the angle is what gives a category its identity and
+	 * shouldn't change just because the window was resized.
+	 */
+	function frameNodes(members: SimNode[], atYaw: number, atPitch: number) {
+		if (!width || !height || members.length === 0) return;
+		const view = viewFrame();
+		const target = members.length === nodes.length ? FIT_TARGET : FOCUS_TARGET;
+
 		let minX = Infinity;
 		let maxX = -Infinity;
 		let minY = Infinity;
 		let maxY = -Infinity;
-		for (const node of nodes) {
-			project(node);
-			const ux = (node.sx - view.cx) / zoom + panX;
-			const uy = (node.sy - view.cy) / zoom + panY;
-			const r = node.sr / zoom;
-			minX = Math.min(minX, ux - r);
-			maxX = Math.max(maxX, ux + r);
-			minY = Math.min(minY, uy - r);
-			maxY = Math.max(maxY, uy + r);
+		for (const node of members) {
+			const pt = projectAt(node, atYaw, atPitch);
+			// The drawn radius at zoom 1, so the framing accounts for the discs
+			// themselves rather than just their centres.
+			const r = radiusOf(node) * pt.depth * Math.max(RADIUS_FLOOR, fitScale() * 1.5);
+			minX = Math.min(minX, pt.x - r);
+			maxX = Math.max(maxX, pt.x + r);
+			minY = Math.min(minY, pt.y - r);
+			maxY = Math.max(maxY, pt.y + r);
 		}
+
 		const halfX = (maxX - minX) / 2;
 		const halfY = (maxY - minY) / 2;
 		if (!(halfX > 0) || !(halfY > 0)) return;
 
-		// Centre on the cloud's own middle. The simulation settles wherever it
-		// settles — the world origin is nowhere in particular — so framing
-		// about the origin left a third of the frame empty on one side.
-		panX = (minX + maxX) / 2;
-		panY = (minY + maxY) / 2;
-
-		const next = Math.min(
-			(view.halfW * FIT_TARGET) / halfX,
-			(view.halfH * FIT_TARGET) / halfY,
+		// Centre on what's being framed, not on the world origin — the
+		// simulation settles wherever it settles.
+		panXTarget = (minX + maxX) / 2;
+		panYTarget = (minY + maxY) / 2;
+		zoomTarget = Math.max(
+			MIN_ZOOM,
+			Math.min(MAX_ZOOM, Math.min((view.halfW * target) / halfX, (view.halfH * target) / halfY)),
 		);
-		zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next));
-		zoomTarget = zoom;
 	}
 
+	/** Every node, or just the ones in a category. */
+	function membersOf(slug: string) {
+		return slug === ALL_CATEGORIES.slug ? nodes : nodes.filter((n) => n.sectionSlug === slug);
+	}
+
+	/**
+	 * Turn the field to face a category and frame it.
+	 *
+	 * Selecting a category used to only fade the other works down, which left
+	 * the selection wherever it happened to be sitting — often edge-on, or
+	 * behind the works it had just dimmed. Flying to an angle that faces the
+	 * set is what makes the filter legible as "here is that collection" rather
+	 * than "some dots went quiet".
+	 */
+	function focusOn(slug: string, snap = false) {
+		const members = membersOf(slug);
+		if (members.length === 0) return;
+		const angle = bestAngleFor(members);
+		yawTarget = nearestTurn(yaw, angle.yaw);
+		pitchTarget = angle.pitch;
+		frameNodes(members, angle.yaw, angle.pitch);
+		if (snap) {
+			// First paint: be there already rather than flying in from a
+			// viewpoint nobody chose.
+			yaw = yawTarget;
+			pitch = pitchTarget;
+			zoom = zoomTarget;
+			panX = panXTarget;
+			panY = panYTarget;
+		}
+	}
+
+	/**
+	 * The same bearing expressed as the shortest way round from where we are,
+	 * so the field never takes the long way to an angle a few degrees away.
+	 */
+	function nearestTurn(from: number, to: number) {
+		const twoPi = Math.PI * 2;
+		let delta = (((to - from) % twoPi) + twoPi) % twoPi;
+		if (delta > Math.PI) delta -= twoPi;
+		return from + delta;
+	}
+
+	/** Re-frames whatever is currently selected, at the angle already chosen. */
+	function refit() {
+		frameNodes(membersOf(filter), yawTarget, pitchTarget);
+	}
+
+	/**
+	 * Where a node is drawn this frame, plus where its title goes. Both carry
+	 * the idle drift, but the title only takes a damped share of it — see
+	 * LABEL_DRIFT_DAMPING.
+	 */
 	function project(node: SimNode) {
 		const cosYaw = Math.cos(yaw);
 		const sinYaw = Math.sin(yaw);
 		const cosPitch = Math.cos(pitch);
 		const sinPitch = Math.sin(pitch);
 		// A slow, tiny orbit of each node around its settled position. Too small
-		// to read as movement, big enough that the graph never looks frozen.
-		const drift = Math.sin(clock * DRIFT_SPEED + node.phase) * DRIFT_AMPLITUDE;
-		const driftB = Math.cos(clock * DRIFT_SPEED * 0.8 + node.phase) * DRIFT_AMPLITUDE;
-		const x = node.x + drift;
-		const y = node.y + driftB;
-		const z = node.z + drift * 0.6;
-
-		const x1 = x * cosYaw + z * sinYaw;
-		const z1 = -x * sinYaw + z * cosYaw;
-		const y2 = y * cosPitch - z1 * sinPitch;
-		const z2 = y * sinPitch + z1 * cosPitch;
-		// Keep the divisor away from zero so a node swinging behind the camera
-		// can't produce an infinite scale.
-		const depth = CAMERA_DISTANCE / Math.max(200, CAMERA_DISTANCE - z2);
-		const fit = fitScale();
-		node.depth = depth;
-		// panX/panY are in unzoomed cloud units and hold the cloud's own centre,
-		// which is not the origin: the simulation settles wherever it settles.
+		// to read as movement, big enough that the graph never looks frozen —
+		// and off entirely for anyone who asked for less motion, which the
+		// idle spin and the ripples already honoured but this didn't.
+		const amplitude = reducedMotion.matches ? 0 : DRIFT_AMPLITUDE;
+		const drift = Math.sin(clock * DRIFT_SPEED + node.phase) * amplitude;
+		const driftB = Math.cos(clock * DRIFT_SPEED * 0.8 + node.phase) * amplitude;
 		const view = viewFrame();
-		node.sx = view.cx + (x1 * depth * fit - panX) * zoom;
-		node.sy = view.cy + (y2 * depth * fit - panY) * zoom;
-		node.sr = radiusOf(node) * depth * zoom * Math.max(RADIUS_FLOOR, fit * 1.5);
+		const fit = fitScale();
+
+		const place = (dx: number, dy: number, dz: number) => {
+			const x = node.x + dx;
+			const y = node.y + dy;
+			const z = node.z + dz;
+			const x1 = x * cosYaw + z * sinYaw;
+			const z1 = -x * sinYaw + z * cosYaw;
+			const y2 = y * cosPitch - z1 * sinPitch;
+			const z2 = y * sinPitch + z1 * cosPitch;
+			// Keep the divisor away from zero so a node swinging behind the
+			// camera can't produce an infinite scale.
+			const depth = CAMERA_DISTANCE / Math.max(200, CAMERA_DISTANCE - z2);
+			return {
+				// panX/panY are in unzoomed cloud units and hold the point the
+				// camera is centred on.
+				sx: view.cx + (x1 * depth * fit - panX) * zoom,
+				sy: view.cy + (y2 * depth * fit - panY) * zoom,
+				depth,
+			};
+		};
+
+		const circle = place(drift, driftB, drift * 0.6);
+		node.depth = circle.depth;
+		node.sx = circle.sx;
+		node.sy = circle.sy;
+		node.sr = radiusOf(node) * circle.depth * zoom * Math.max(RADIUS_FLOOR, fit * 1.5);
+
+		// The title rides a damped copy of the same drift. Projected rather
+		// than lerped toward the circle: a lerp would lag visibly while the
+		// field is being turned, where this tracks an orbit exactly and only
+		// takes the tremble out of the idle float.
+		const label = place(
+			drift * LABEL_DRIFT_DAMPING,
+			driftB * LABEL_DRIFT_DAMPING,
+			drift * 0.6 * LABEL_DRIFT_DAMPING,
+		);
+		node.lx = label.sx;
+		node.ly = label.sy;
 	}
 
 	// --- Interaction state ------------------------------------------------
@@ -673,7 +865,6 @@ export function initGraph() {
 		const span = maxDepth - minDepth || 1;
 		for (const node of nodes) node.near = (node.depth - minDepth) / span;
 
-		const labelsVisible = zoom * fitScale() > 0.4;
 		const anyHighlight = nodes.some((node) => node.glow > 0.02);
 		/** 1 while a single category is being shown, 0 while showing everything. */
 		const filtering = filter === ALL_CATEGORIES.slug ? 0 : 1;
@@ -730,23 +921,45 @@ export function initGraph() {
 			x1: n.sx + n.sr + 2,
 			y1: n.sy + n.sr + 2,
 		}));
+		// Not rounded: at these sizes the computed value sits near an integer
+		// boundary often enough that rounding made titles flick a whole pixel
+		// bigger and smaller as the field breathed, which was most of what
+		// read as trembling. Canvas is happy with fractional sizes.
 		const labelSize = (node: SimNode) =>
-			Math.max(10, Math.round((10 + 3 * node.near) * zoom * Math.max(0.82, fitScale() * 1.9)));
+			Math.min(
+				LABEL_MAX_SIZE,
+				Math.max(LABEL_MIN_SIZE, (10 + 3 * node.near) * zoom * Math.max(0.82, fitScale() * 1.9)),
+			);
 
-		for (const i of [...order].reverse()) {
+		// Nearest first, except that a selected category jumps the queue: the
+		// point of focusing one is to read its works, so they get first claim
+		// on the space before anything behind them does.
+		const planOrder = [...order].reverse();
+		if (filter !== ALL_CATEGORIES.slug) {
+			planOrder.sort((a, b) => Number(inFilter(nodes[b])) - Number(inFilter(nodes[a])));
+		}
+
+		for (const i of planOrder) {
 			const node = nodes[i];
 			if (i === hovered) continue; // its label lives in the preview box
-			const lit = node.glow > 0.02 || i === active;
-			if (!labelsVisible && !lit) continue;
+			const selected = filtering > 0 && inFilter(node);
+			const lit = node.glow > 0.02 || i === active || selected;
+			// While a category is showing, only its works are named. The others
+			// stay on screen as context — naming them too just crowds the set
+			// the reader asked to look at.
+			if (filtering > 0 && !selected && node.glow <= 0.02 && i !== active) continue;
+			// Big enough to be worth naming — measured on this circle, not on
+			// the graph as a whole.
+			if (node.sr < LABEL_MIN_RADIUS && !lit) continue;
 
 			const size = labelSize(node);
 			ctx.font = `${size}px ${theme.family}`;
-			const top = node.sy + node.sr + 7;
+			const top = node.ly + node.sr + 7;
 			const half = ctx.measureText(node.title).width / 2;
 			const box = {
-				x0: node.sx - half - LABEL_PADDING,
+				x0: node.lx - half - LABEL_PADDING,
 				y0: top - LABEL_PADDING,
-				x1: node.sx + half + LABEL_PADDING,
+				x1: node.lx + half + LABEL_PADDING,
 				y1: top + size + LABEL_PADDING,
 			};
 			const clear =
@@ -758,6 +971,15 @@ export function initGraph() {
 				labelled.add(i);
 				taken.push(box);
 			}
+		}
+
+		// Ease every title toward whether it won a place, so one crossing in
+		// front of another dissolves instead of blinking. A title on its way
+		// out has already given its box back, so the one replacing it doesn't
+		// have to wait — they cross-fade, which is what the eye expects.
+		for (let i = 0; i < nodes.length; i++) {
+			const target = labelled.has(i) ? 1 : 0;
+			nodes[i].labelFade += (target - nodes[i].labelFade) * LABEL_FADE_EASE;
 		}
 
 		for (const i of order) {
@@ -808,7 +1030,7 @@ export function initGraph() {
 			// rest are dropped once the graph is drawn small enough that titles
 			// would overlap each other — which is the default on a phone, where
 			// the HUD takes over via tap-to-preview.
-			if (labelled.has(i)) {
+			if (node.labelFade > 0.01) {
 				// Titles take the node colour, not --muted: they name the bubble
 				// they sit under, and at the far end the old pairing composited
 				// to 1.2:1, which is a shape where a word should be.
@@ -824,12 +1046,12 @@ export function initGraph() {
 						(LABEL_ALPHA_FLOOR + LABEL_ALPHA_RANGE * node.near + picked * 0.35) *
 							dimmed *
 							visible,
-					),
+					) * node.labelFade,
 				);
 				ctx.font = `${labelSize(node)}px ${theme.family}`;
 				ctx.textAlign = 'center';
 				ctx.textBaseline = 'top';
-				ctx.fillText(node.title, node.sx, node.sy + node.sr + 7);
+				ctx.fillText(node.title, node.lx, node.ly + node.sr + 7);
 			}
 		}
 	}
@@ -856,6 +1078,8 @@ export function initGraph() {
 		yaw += (yawTarget - yaw) * CAMERA_EASE;
 		pitch += (pitchTarget - pitch) * CAMERA_EASE;
 		zoom += (zoomTarget - zoom) * CAMERA_EASE;
+		panX += (panXTarget - panX) * CAMERA_EASE;
+		panY += (panYTarget - panY) * CAMERA_EASE;
 
 		// Highlights and the filter fade instead of snapping.
 		const related = hovered === null ? null : neighbours[hovered];
@@ -1036,12 +1260,19 @@ export function initGraph() {
 	syncActive();
 
 	onFilterChange((slug) => {
+		const changed = slug !== filter;
 		filter = slug;
 		// Whatever was under the pointer may have just been filtered away.
 		if (hovered !== null && !inFilter(nodes[hovered])) {
 			hovered = null;
 			canvas.classList.remove('over-node');
 			updateHud();
+		}
+		// Turn to face the selection. Re-enables auto-fitting: the reader asked
+		// for this framing, so a later resize should preserve it.
+		if (changed) {
+			autoFit = true;
+			focusOn(slug);
 		}
 	});
 	filter = currentFilter();
@@ -1065,10 +1296,12 @@ export function initGraph() {
 
 	const observer = new ResizeObserver(() => {
 		resize();
-		if (autoFit) fitToView();
+		if (autoFit) refit();
 	});
 	observer.observe(canvas);
 	resize();
-	fitToView();
+	// Land on the "All" viewpoint rather than an arbitrary angle, and be there
+	// on the first frame rather than flying in from nowhere.
+	focusOn(filter, true);
 	requestAnimationFrame(frame);
 }

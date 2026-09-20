@@ -50,7 +50,7 @@
 	   page, which is to say invisible. These are darker to start with so they
 	   survive that treatment and the far half of the cloud still reads. */
 	--graph-node: #465268;
-	--graph-link: #97a5b6;
+	--graph-link: #8b99ab;
 	/* Hairlines in the notation styling. A touch darker than --border, which
 	   is tuned for filled edges: a 1px rule at --border all but disappears. */
 	--rule: #c3ced6;
@@ -79,5 +79,5 @@
 	/* Same reasoning as the light pair, in the other direction: --border at
 	   #2a303c on a near-black page is not a line, it's a rumour. */
 	--graph-node: #aab7ce;
-	--graph-link: #59667d;
+	--graph-link: #65738b;
 }
