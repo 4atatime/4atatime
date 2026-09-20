@@ -114,6 +114,40 @@ const HIT_SLOP = 18;
 const DRIFT_AMPLITUDE = 10;
 const DRIFT_SPEED = 0.00035;
 
+// --- Depth cueing ---------------------------------------------------------
+// Far things recede; they must not disappear. The first version faded both
+// colour and alpha hard enough that a standby link at the back of the cloud
+// composited to 1.04:1 against the page — no contrast at all. These are the
+// floors that keep the whole field legible while still reading as 3D.
+//
+// Measured against the shipped palette, standby, worst depth to best:
+//   node  2.4:1 → 7.7:1 (light)   3.2:1 → 9.8:1 (dark)
+//   link  1.6:1 → 2.3:1 (light)   1.9:1 → 3.2:1 (dark)
+//
+// The dimmed figures — what everything *else* drops to while one node is
+// hovered — are deliberately left near 1.1:1. That collapse is what makes the
+// highlight read, and raising the standby floors without keeping it would
+// have traded one legibility problem for another.
+/** How far a node's colour is washed toward the page at the far end. */
+const NODE_DEPTH_FADE = 0.25;
+/** Alpha at the far end, and how much more the near end gets. */
+const NODE_ALPHA_FLOOR = 0.68;
+const NODE_ALPHA_RANGE = 0.32;
+/** What a node drops to when something else is hovered. */
+const NODE_DIMMED = 0.34;
+/** The same pair for edges. */
+const LINK_DEPTH_FADE = 0.22;
+const LINK_ALPHA = 0.95;
+/** Edges keep most of their weight at the far end, or the web comes apart. */
+const LINK_NEAR_FLOOR = 0.78;
+/** Edge alpha while something is hovered: the quiet state, and the lit one. */
+const LINK_ALPHA_DIMMED = 0.18;
+const LINK_ALPHA_LIT = 0.7;
+/** Titles are text and need more than a shape does: 2.1:1 at the far end. */
+const LABEL_DEPTH_FADE = 0.28;
+const LABEL_ALPHA_FLOOR = 0.62;
+const LABEL_ALPHA_RANGE = 0.38;
+
 /** How much of the gap a node's highlight closes each frame. */
 const GLOW_EASE = 0.16;
 /** Same easing for the filter fade — slower, because it's a bigger change. */
@@ -183,6 +217,10 @@ function readTheme(root: HTMLElement) {
 		muted: parseColor(token('--muted')),
 		border: parseColor(token('--border')),
 		accent: parseColor(token('--accent')),
+		// The graph's own two colours. Separate from --muted/--border because
+		// those are tuned for text and UI edges; see the note in tokens.css.
+		node: parseColor(token('--graph-node')),
+		link: parseColor(token('--graph-link')),
 		// Far nodes are blended toward the page colour — atmospheric perspective,
 		// the same trick that makes distant hills go pale.
 		bg: parseColor(token('--bg')),
@@ -651,7 +689,7 @@ export function initGraph() {
 			const b = nodes[link.target];
 			const lit = Math.max(a.glow, b.glow) * (hovered !== null ? 1 : 0);
 			const near = (a.near + b.near) / 2;
-			const base = mix(theme.border, theme.bg, (1 - near) * 0.6);
+			const base = mix(theme.link, theme.bg, (1 - near) * LINK_DEPTH_FADE);
 			const color = mix(base, theme.accent, lit);
 			// An edge is only as present as its dimmer end — a line running off
 			// to a filtered-out work shouldn't stay at full strength.
@@ -662,7 +700,9 @@ export function initGraph() {
 			ctx.lineTo(b.sx, b.sy);
 			ctx.strokeStyle = rgba(
 				color,
-				(anyHighlight ? 0.16 + 0.64 * lit : 0.7) * (0.55 + 0.45 * near) * visible,
+				(anyHighlight ? LINK_ALPHA_DIMMED + LINK_ALPHA_LIT * lit : LINK_ALPHA) *
+					(LINK_NEAR_FLOOR + (1 - LINK_NEAR_FLOOR) * near) *
+					visible,
 			);
 			ctx.lineWidth = (0.6 + 0.9 * near) * (1 + lit * 0.6);
 			ctx.stroke();
@@ -724,15 +764,18 @@ export function initGraph() {
 			const node = nodes[i];
 			// Far nodes shrink toward the background; near ones come forward in
 			// full contrast. Size is already handled by the perspective scale.
-			const base = mix(theme.muted, theme.bg, (1 - node.near) * 0.55);
+			const base = mix(theme.node, theme.bg, (1 - node.near) * NODE_DEPTH_FADE);
 			// While a category is being shown, its works are tinted toward the
 			// accent as well as left at full strength — fading the others down
 			// on its own was too quiet a signal to read as a selection.
 			const picked = filtering * node.shown;
 			const color = mix(mix(base, theme.accent, picked * 0.45), theme.accent, node.glow);
-			const dimmed = anyHighlight ? 0.3 + 0.7 * node.glow : 1;
+			const dimmed = anyHighlight ? NODE_DIMMED + (1 - NODE_DIMMED) * node.glow : 1;
 			const visible = FILTERED_ALPHA + (1 - FILTERED_ALPHA) * node.shown;
-			const alpha = Math.min(1, (0.45 + 0.55 * node.near + picked * 0.35) * dimmed * visible);
+			const alpha = Math.min(
+				1,
+				(NODE_ALPHA_FLOOR + NODE_ALPHA_RANGE * node.near + picked * 0.35) * dimmed * visible,
+			);
 
 			// Ripples: constant under the pointer, and constant (a touch
 			// stronger) for whichever work the side panel has open.
@@ -756,7 +799,7 @@ export function initGraph() {
 			} else if (node.glow > 0.02) {
 				ctx.beginPath();
 				ctx.arc(node.sx, node.sy, node.sr * (1.8 + node.glow * 0.8), 0, Math.PI * 2);
-				ctx.strokeStyle = rgba(theme.accent, 0.35 * node.glow * visible);
+				ctx.strokeStyle = rgba(theme.accent, 0.55 * node.glow * visible);
 				ctx.lineWidth = 1;
 				ctx.stroke();
 			}
@@ -766,14 +809,22 @@ export function initGraph() {
 			// would overlap each other — which is the default on a phone, where
 			// the HUD takes over via tap-to-preview.
 			if (labelled.has(i)) {
+				// Titles take the node colour, not --muted: they name the bubble
+				// they sit under, and at the far end the old pairing composited
+				// to 1.2:1, which is a shape where a word should be.
 				const labelColor = mix(
-					mix(mix(theme.muted, theme.bg, (1 - node.near) * 0.6), theme.accent, picked * 0.45),
+					mix(mix(theme.node, theme.bg, (1 - node.near) * LABEL_DEPTH_FADE), theme.accent, picked * 0.45),
 					theme.accent,
 					Math.max(node.glow, i === active ? 1 : 0),
 				);
 				ctx.fillStyle = rgba(
 					labelColor,
-					Math.min(1, (0.35 + 0.65 * node.near + picked * 0.35) * dimmed * visible),
+					Math.min(
+						1,
+						(LABEL_ALPHA_FLOOR + LABEL_ALPHA_RANGE * node.near + picked * 0.35) *
+							dimmed *
+							visible,
+					),
 				);
 				ctx.font = `${labelSize(node)}px ${theme.family}`;
 				ctx.textAlign = 'center';
