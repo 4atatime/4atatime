@@ -19,7 +19,7 @@ location: Hangzhou, Shanghai, Florence, Milan
 tools:
   - Procreate (digital)
   - Sketchbook (scanned)
-link: https://www.are.na/4-atatime/old-drawings
+link: ""
 heroImage: /src/assets/work/draws-and-crawls/hero.png
 links:
   - label: Are.na — old drawings
@@ -42,4 +42,4 @@ gallery:
 ---
 Cringe but hey everyone had an emo era! 
 
-More in the link above.
+More in the link below.
