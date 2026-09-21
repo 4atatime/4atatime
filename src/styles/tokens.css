@@ -51,6 +51,15 @@
 	   survive that treatment and the far half of the cloud still reads. */
 	--graph-node: #465268;
 	--graph-link: #8b99ab;
+	/* The sky behind the field. Three drifts of colour and a layer of dust,
+	   all of it well under what you'd call visible — the test is that you
+	   should not be able to say what it is, only that the page isn't a flat
+	   fill. Daylight, so the drifts are warm and the dust is dark. */
+	--sky-a: rgba(146 164 196 / 0.15);
+	--sky-b: rgba(196 170 150 / 0.12);
+	--sky-c: rgba(140 186 176 / 0.09);
+	--stardust: url('/textures/stardust-light.svg');
+	--grain-opacity: 0.035;
 	/* Hairlines in the notation styling. A touch darker than --border, which
 	   is tuned for filled edges: a 1px rule at --border all but disappears. */
 	--rule: #c3ced6;
@@ -80,4 +89,12 @@
 	   #2a303c on a near-black page is not a line, it's a rumour. */
 	--graph-node: #aab7ce;
 	--graph-link: #55627a;
+	/* Night: the drifts go cold and carry further, and the dust is light.
+	   A near-black page can hold more of this than a white one before it
+	   stops looking like paper and starts looking like a gradient. */
+	--sky-a: rgba(92 124 186 / 0.16);
+	--sky-b: rgba(150 110 170 / 0.1);
+	--sky-c: rgba(96 178 154 / 0.09);
+	--stardust: url('/textures/stardust-dark.svg');
+	--grain-opacity: 0.05;
 }

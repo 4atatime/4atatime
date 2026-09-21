@@ -133,6 +133,14 @@ export function initWindow() {
 		if (root.hidden) {
 			lastFocused = document.activeElement;
 			root.hidden = false;
+		}
+		// Asked separately from `hidden`, because a close that is still sliding
+		// out is neither hidden nor open: it is visible, parked off-screen,
+		// waiting for its timer. Reopening in that window used to swap the
+		// content in and never put the class back, so the panel sat in its
+		// closed position holding the new work — which looked exactly like
+		// having been thrown out of the panel altogether.
+		if (!root.classList.contains('open')) {
 			// Two frames, not one. `hidden` is display:none, and an element
 			// going from display:none straight to its end state in the same
 			// frame has no start state to transition *from* — which is why the
@@ -205,6 +213,9 @@ export function initWindow() {
 		// out instead. The canvas decides at pointer*up*, where it can tell a
 		// click from a drag and a work from empty space.
 		if (target?.closest?.('#graph-canvas')) return;
+		// The preview box belongs to the graph as much as the canvas does, and
+		// its "Open the file" button is a change of subject, not an exit.
+		if (target?.closest?.('#graph-hud')) return;
 		dismiss();
 	});
 

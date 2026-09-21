@@ -179,33 +179,38 @@ const DRIFT_SPEED = 0.00035;
 // while still letting the back of the cloud go quiet.
 //
 // Measured against the shipped palette, standby, back of the cloud to front:
-//   node  2.0:1 → 7.7:1 (light)   2.6:1 → 9.8:1 (dark)
-//   link  1.4:1 → 2.9:1 (light)   1.4:1 → 3.2:1 (dark)
+//   node  1.6:1 → 7.7:1 (light)   1.7:1 → 9.8:1 (dark)
+//   link  1.2:1 → 2.9:1 (light)   1.2:1 → 3.2:1 (dark)
 //
-// That is a front-to-back spread of about 3.9x, against 2.7x when the depth
-// cue was a ranking — the works at the back are now clearly behind something
-// rather than merely slightly greyer than it.
+// That is a front-to-back spread of about 5.0x in light and 5.7x in dark,
+// against 3.9x before and 2.7x when the depth cue was still a ranking. The
+// near end cannot go any further — it is already at full alpha in the theme's
+// own colour — so every increase past this point comes out of the far end,
+// which is why the floors below are the thing to watch rather than the
+// density. They are held where the back of the cloud still reads as present
+// against the page: 1.04:1, where an early version put standby links, is not
+// dim, it is absent.
 //
 // The dimmed figures — what everything *else* drops to while one node is
 // hovered — are deliberately left near 1.1:1. That collapse is what makes the
 // highlight read, and raising the standby floors without keeping it would
 // have traded one legibility problem for another.
 /** E-foldings of extinction from the front of the cloud to the back. */
-const FOG_DENSITY = 1.5;
+const FOG_DENSITY = 2;
 /** How far a node's colour is washed toward the page at the far end. */
-const NODE_DEPTH_FADE = 0.4;
+const NODE_DEPTH_FADE = 0.5;
 /** Alpha at the back of the cloud, and how much more the front gets. */
-const NODE_ALPHA_FLOOR = 0.5;
-const NODE_ALPHA_RANGE = 0.5;
+const NODE_ALPHA_FLOOR = 0.4;
+const NODE_ALPHA_RANGE = 0.6;
 /** What a node drops to when something else is hovered. */
 const NODE_DIMMED = 0.34;
 /** The same pair for edges, which stay deliberately quieter than the discs:
  * roughly a third of a node's contrast at any given depth. Visible as
  * structure, never competing with the works they join. */
-const LINK_DEPTH_FADE = 0.38;
+const LINK_DEPTH_FADE = 0.48;
 const LINK_ALPHA = 1;
 /** Edges keep this much of their weight at the back, or the web comes apart. */
-const LINK_NEAR_FLOOR = 0.42;
+const LINK_NEAR_FLOOR = 0.28;
 /** Edge alpha while something is hovered: the quiet state, and the lit one. */
 const LINK_ALPHA_DIMMED = 0.18;
 const LINK_ALPHA_LIT = 0.7;
@@ -1177,6 +1182,8 @@ export function initGraph() {
 		// from its node's centre outwards and so can still reach into it —
 		// which is what moving the camera onto an opened work made visible.
 		const taken: Box[] = chromeBoxes();
+		/** A title has to fit on the screen to be worth drawing. */
+		const onScreen = (box: Box) => box.x0 >= 0 && box.x1 <= width && box.y0 >= 0 && box.y1 <= height;
 		// The bubbles themselves are obstacles: a title printed across another
 		// work's node was the ugliest case, and the one the label-versus-label
 		// test alone never caught.
@@ -1228,6 +1235,7 @@ export function initGraph() {
 				y1: top + size + LABEL_PADDING,
 			};
 			const clear =
+				onScreen(box) &&
 				!taken.some((o) => hits(box, o)) &&
 				!nodeBoxes.some((o, j) => j !== i && hits(box, o));
 			// A lit node always gets its label — being told what you're
