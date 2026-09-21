@@ -122,6 +122,9 @@ const DEFAULT_PITCH = -0.25;
 const RADIUS_FLOOR = 0.55;
 /** Extra pixels around a node that still count as pointing at it. */
 const HIT_SLOP = 18;
+/** How far a press may travel and still be a click rather than a drag. */
+const MOUSE_SLOP = 4;
+const TOUCH_SLOP = 10;
 
 // --- Idle drift -----------------------------------------------------------
 // Scaled with the layout spread, so the drift stays the same fraction of the
@@ -136,8 +139,8 @@ const DRIFT_SPEED = 0.00035;
 // floors that keep the whole field legible while still reading as 3D.
 //
 // Measured against the shipped palette, standby, worst depth to best:
-//   node  2.4:1 → 7.7:1 (light)   3.2:1 → 9.8:1 (dark)
-//   link  1.6:1 → 2.3:1 (light)   1.9:1 → 3.2:1 (dark)
+//   node  2.8:1 → 7.7:1 (light)   3.9:1 → 9.8:1 (dark)
+//   link  1.9:1 → 2.9:1 (light)   2.3:1 → 3.7:1 (dark)
 //
 // The dimmed figures — what everything *else* drops to while one node is
 // hovered — are deliberately left near 1.1:1. That collapse is what makes the
@@ -145,9 +148,11 @@ const DRIFT_SPEED = 0.00035;
 // have traded one legibility problem for another.
 /** How far a node's colour is washed toward the page at the far end. */
 const NODE_DEPTH_FADE = 0.25;
-/** Alpha at the far end, and how much more the near end gets. */
-const NODE_ALPHA_FLOOR = 0.68;
-const NODE_ALPHA_RANGE = 0.32;
+/** Alpha at the far end, and how much more the near end gets. The near end
+ * reaches 1 either way; raising the floor only firms up the far half, which
+ * is the only part that was ever see-through. */
+const NODE_ALPHA_FLOOR = 0.78;
+const NODE_ALPHA_RANGE = 0.22;
 /** What a node drops to when something else is hovered. */
 const NODE_DIMMED = 0.34;
 /** The same pair for edges, which stay deliberately quieter than the discs:
@@ -669,6 +674,14 @@ export function initGraph() {
 	let releaseTimer: number | undefined;
 	/** The work open in the side panel — drawn as a held-down marker. */
 	let active: number | null = null;
+	/** Whether a panel was already showing when the current press started. */
+	let panelWasOpen = false;
+
+	/** True while a work, or About & Contact, is showing over the graph. */
+	function isPanelOpen() {
+		const panel = document.getElementById('detail-window');
+		return !!panel && !panel.hidden;
+	}
 	let filter = ALL_CATEGORIES.slug;
 
 	const byId = new Map(nodes.map((node, i) => [node.id, i]));
@@ -1116,13 +1129,22 @@ export function initGraph() {
 		pointerId = event.pointerId;
 		pointerMoved = false;
 		pointerStart = { x: event.clientX, y: event.clientY };
+		// window.ts closes an open panel on pointerdown. Noting it here keeps
+		// one press from doing two things — closing the panel *and* clearing
+		// the category — which would feel like the site overshooting.
+		panelWasOpen = isPanelOpen();
 		const hit = nodeAt(event.clientX, event.clientY);
 		if (hit !== null) {
 			dragNode = hit;
 		} else {
 			orbiting = true;
 		}
-		canvas.setPointerCapture(event.pointerId);
+		// Throws if the pointer is already gone by the time we get here,
+		// which costs us nothing: without capture the move still tracks,
+		// it just stops early if the finger leaves the canvas.
+		try {
+			canvas.setPointerCapture(event.pointerId);
+		} catch {}
 	});
 
 	canvas.addEventListener('pointermove', (event) => {
@@ -1147,7 +1169,10 @@ export function initGraph() {
 		if (pointerId === event.pointerId && (orbiting || dragNode !== null)) {
 			const dx = event.clientX - pointerStart.x;
 			const dy = event.clientY - pointerStart.y;
-			if (!pointerMoved && Math.hypot(dx, dy) > 4) pointerMoved = true;
+			// A finger never lands as still as a mouse, and treating a 5px
+			// wobble as a drag is what makes taps feel unreliable.
+			const slop = event.pointerType === 'mouse' ? MOUSE_SLOP : TOUCH_SLOP;
+			if (!pointerMoved && Math.hypot(dx, dy) > slop) pointerMoved = true;
 			pointerStart = { x: event.clientX, y: event.clientY };
 
 			if (orbiting) {
@@ -1211,14 +1236,39 @@ export function initGraph() {
 				// No hover on touch, so a tap has to do both jobs: the first one
 				// on a node previews it, a second on the same node opens it.
 				if (hit !== hovered) {
+					const hadPreview = hovered !== null;
 					holdHover();
 					hovered = hit;
 					updateHud();
+					// Tapping past a work while its preview is up just puts the
+					// preview away. Clearing the category as well would be two
+					// things at once; that's the next tap's job.
+					if (hit === null && !hadPreview) clearFilterIfAny();
 					return;
 				}
 			}
 			if (hit !== null) open(hit);
+			else clearFilterIfAny();
 		}
+	}
+
+	/**
+	 * Clicking the empty field is the way out of a category.
+	 *
+	 * Without it the only route back is the "All" chip, which is easy to miss
+	 * once the legend has scrolled out of mind — and being unable to undo a
+	 * filter is the kind of dead end people quietly leave over. Dismissing a
+	 * selection by clicking away from it is the same gesture as closing the
+	 * panel, so it needs no explaining.
+	 *
+	 * One layer at a time: a press that closed a panel doesn't also clear the
+	 * category, and a drag or a pinch isn't a click at all — both are already
+	 * ruled out before this runs.
+	 */
+	function clearFilterIfAny() {
+		if (panelWasOpen || isPanelOpen()) return;
+		if (filter === ALL_CATEGORIES.slug) return;
+		setFilter(ALL_CATEGORIES.slug);
 	}
 
 	canvas.addEventListener('pointerup', endPointer);
