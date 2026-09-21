@@ -30,6 +30,16 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 			<li class="on-touch"><span class="key-act">drag</span><span class="key-what">turn the field</span></li>
 			<li class="on-touch"><span class="key-act">pinch</span><span class="key-what">zoom in / out</span></li>
 			<li class="on-touch"><span class="key-act">tap ×2</span><span class="key-what">preview, then open</span></li>
+			<!-- Only while a category is showing: the way out of it. Being
+			     unable to undo a filter is a dead end people leave over, and
+			     the "All" chip alone isn't obvious enough to count as the
+			     answer. -->
+			<li class="escape on-pointer">
+				<span class="key-act">click</span><span class="key-what">empty space to show all</span>
+			</li>
+			<li class="escape on-touch">
+				<span class="key-act">tap</span><span class="key-what">empty space to show all</span>
+			</li>
 		</ul>
 	</div>
 
@@ -130,6 +140,11 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 		color: var(--muted);
 		opacity: 0.7;
 	}
+
+	.key .escape {
+		color: var(--accent);
+		opacity: 0.85;
+	}
 	.key-act {
 		flex: none;
 		width: 3.1rem;
@@ -151,6 +166,13 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 		.on-touch {
 			display: flex !important;
 		}
+	}
+
+	/* The way out is only worth a line while there's a category to leave.
+	   This has to come after the rules above and match them for weight,
+	   since those set the device's line to `display: flex !important`. */
+	.station:not(.filtered) .key .escape {
+		display: none !important;
 	}
 
 	.filters {
@@ -347,10 +369,14 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 		button.addEventListener('click', () => setFilter(button.dataset.filter ?? ALL_CATEGORIES.slug));
 	}
 
+	const station = document.querySelector('.station');
+
 	onFilterChange((slug) => {
 		for (const button of buttons) {
 			button.setAttribute('aria-pressed', String(button.dataset.filter === slug));
 		}
+		// Reveals the "click empty space" line in the key.
+		station?.classList.toggle('filtered', slug !== ALL_CATEGORIES.slug);
 	});
 
 	// The filter lives in the query string, so the back button has to put the

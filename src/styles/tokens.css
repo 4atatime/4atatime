@@ -79,5 +79,5 @@
 	/* Same reasoning as the light pair, in the other direction: --border at
 	   #2a303c on a near-black page is not a line, it's a rumour. */
 	--graph-node: #aab7ce;
-	--graph-link: #65738b;
+	--graph-link: #5e6b82;
 }
