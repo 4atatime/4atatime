@@ -20,6 +20,7 @@ import type { Body } from '../lib/layout';
 import { mulberry32, seedBodies, settle, tick } from '../lib/layout';
 import { ALL_CATEGORIES } from '../lib/categories';
 import { currentFilter, onFilterChange, setFilter } from './filter';
+import { dismissPanel } from './window';
 
 interface RawNode {
 	id: string;
@@ -46,7 +47,9 @@ interface SimNode extends RawNode, Body {
 	sr: number;
 	/** Raw perspective scale. */
 	depth: number;
-	/** Depth normalised across the cloud this frame: 0 = farthest, 1 = nearest. */
+	/** Distance from the camera in world units — the actual one, not a ranking. */
+	dist: number;
+	/** How present this distance should look: 1 at the front, →0 at the back. */
 	near: number;
 	/** Phase offset for the idle drift, so nodes don't move in lockstep. */
 	phase: number;
@@ -82,6 +85,20 @@ const FIT_TARGET = 0.92;
  * rest of the garden in shot, which is what makes the filter legible.
  */
 const FOCUS_TARGET = 0.58;
+/**
+ * How many other works to keep in shot when one is opened, and how much of
+ * the room left beside the panel they should fill.
+ *
+ * The point of the move is context: a work on its own in an empty frame says
+ * nothing about where it sits, and the whole field re-centred says nothing
+ * about the work. Six neighbours is enough to show which cluster you are in
+ * while still arriving somewhere specific.
+ */
+const COMPANY = 6;
+const WORK_FOCUS_TARGET = 0.8;
+/** How much closer a linked work counts than an unrelated one at the same
+ * distance, when choosing what to keep in shot. */
+const RELATED_BIAS = 0.6;
 /** Breathing room around a label before it counts as colliding. */
 const LABEL_PADDING = 5;
 /**
@@ -98,6 +115,8 @@ const LABEL_PADDING = 5;
 const DESKTOP_FROM = 721;
 const LEGEND_GUTTER = 0.2;
 const LEGEND_GUTTER_MAX = 240;
+/** Most of the window the legend's gutter may ever claim. */
+const LEGEND_GUTTER_MAX_SHARE = 0.3;
 /** Breathing room between the chrome and the nearest work. */
 const CHROME_CLEARANCE = 14;
 /** Used only until the real elements have been measured. */
@@ -133,42 +152,74 @@ const DRIFT_AMPLITUDE = 10;
 const DRIFT_SPEED = 0.00035;
 
 // --- Depth cueing ---------------------------------------------------------
-// Far things recede; they must not disappear. The first version faded both
-// colour and alpha hard enough that a standby link at the back of the cloud
-// composited to 1.04:1 against the page — no contrast at all. These are the
-// floors that keep the whole field legible while still reading as 3D.
+// How far away a thing is, expressed as how present it looks. Distance is the
+// only cue a flat canvas has besides size, so this is most of what makes the
+// field read as a volume you are looking into rather than a web with a
+// gradient over it.
 //
-// Measured against the shipped palette, standby, worst depth to best:
-//   node  2.8:1 → 7.7:1 (light)   3.9:1 → 9.8:1 (dark)
-//   link  1.9:1 → 2.9:1 (light)   2.3:1 → 3.7:1 (dark)
+// Two things decide it. The first is that the cue is taken from the node's
+// real camera-space distance, not — as it was — from where it ranked among
+// the others that frame. Ranking was cheap and always used the full range,
+// but it showed: whatever happened to be furthest back was drawn as fully
+// distant even when the cloud was turned edge-on and everything sat at much
+// the same depth, and two works genuinely side by side could be shaded a long
+// way apart. Distance has neither problem, and it stays honest while the
+// field turns.
+//
+// The second is that extinction is exponential, the way haze actually works:
+// a fixed fraction of what is left is lost per unit travelled, so most of the
+// fading happens across the first half and the back of the cloud settles onto
+// a floor rather than racing to nothing. FOG_DENSITY is how many e-foldings
+// that comes to from the front of the cloud to the back — a shape, not a
+// distance — so it keeps its look as the CMS adds works and the field grows.
+//
+// Far things recede; they must not disappear. An early version faded colour
+// and alpha hard enough that a standby link at the back composited to 1.04:1
+// against the page — no contrast at all. The floors below are what stop that
+// while still letting the back of the cloud go quiet.
+//
+// Measured against the shipped palette, standby, back of the cloud to front:
+//   node  2.0:1 → 7.7:1 (light)   2.6:1 → 9.8:1 (dark)
+//   link  1.4:1 → 2.9:1 (light)   1.4:1 → 3.2:1 (dark)
+//
+// That is a front-to-back spread of about 3.9x, against 2.7x when the depth
+// cue was a ranking — the works at the back are now clearly behind something
+// rather than merely slightly greyer than it.
 //
 // The dimmed figures — what everything *else* drops to while one node is
 // hovered — are deliberately left near 1.1:1. That collapse is what makes the
 // highlight read, and raising the standby floors without keeping it would
 // have traded one legibility problem for another.
+/** E-foldings of extinction from the front of the cloud to the back. */
+const FOG_DENSITY = 1.5;
 /** How far a node's colour is washed toward the page at the far end. */
-const NODE_DEPTH_FADE = 0.25;
-/** Alpha at the far end, and how much more the near end gets. The near end
- * reaches 1 either way; raising the floor only firms up the far half, which
- * is the only part that was ever see-through. */
-const NODE_ALPHA_FLOOR = 0.78;
-const NODE_ALPHA_RANGE = 0.22;
+const NODE_DEPTH_FADE = 0.4;
+/** Alpha at the back of the cloud, and how much more the front gets. */
+const NODE_ALPHA_FLOOR = 0.5;
+const NODE_ALPHA_RANGE = 0.5;
 /** What a node drops to when something else is hovered. */
 const NODE_DIMMED = 0.34;
 /** The same pair for edges, which stay deliberately quieter than the discs:
- * ~40% of a node's contrast up close, ~80% at the far end where everything is
- * fighting to be seen. Visible as structure, never competing with the works. */
-const LINK_DEPTH_FADE = 0.18;
+ * roughly a third of a node's contrast at any given depth. Visible as
+ * structure, never competing with the works they join. */
+const LINK_DEPTH_FADE = 0.38;
 const LINK_ALPHA = 1;
-/** Edges keep most of their weight at the far end, or the web comes apart. */
-const LINK_NEAR_FLOOR = 0.82;
+/** Edges keep this much of their weight at the back, or the web comes apart. */
+const LINK_NEAR_FLOOR = 0.42;
 /** Edge alpha while something is hovered: the quiet state, and the lit one. */
 const LINK_ALPHA_DIMMED = 0.18;
 const LINK_ALPHA_LIT = 0.7;
-/** Titles are text and need more than a shape does: 2.1:1 at the far end. */
-const LABEL_DEPTH_FADE = 0.28;
-const LABEL_ALPHA_FLOOR = 0.62;
-const LABEL_ALPHA_RANGE = 0.38;
+/**
+ * Titles are text and need more than a shape does. They also sit deeper in
+ * the new cue than they did in the old one — an exponential spends most of
+ * its range early — so the floor is held higher here than for the discs on
+ * purpose: a receding circle is still a circle, but grey-on-grey text is just
+ * hard to read. Worst case is about 2.4:1, and only the front of the cloud is
+ * named at all (see LABEL_MIN_RADIUS).
+ */
+const LABEL_DEPTH_FADE = 0.22;
+const LABEL_ALPHA_FLOOR = 0.68;
+const LABEL_ALPHA_RANGE = 0.32;
 
 // --- Titles ---------------------------------------------------------------
 // Which works are named is decided per node, by how big that node is actually
@@ -319,6 +370,7 @@ export function initGraph() {
 		sy: 0,
 		sr: 0,
 		depth: 1,
+		dist: CAMERA_DISTANCE,
 		near: 0.5,
 		phase: random() * Math.PI * 2,
 		glow: 0,
@@ -345,6 +397,25 @@ export function initGraph() {
 
 	// Settle before the first paint, so the graph never appears mid-explosion.
 	settle(nodes, links, groups, random);
+
+	/**
+	 * How deep the cloud is, measured rather than assumed. The fog is defined
+	 * across the cloud's own front-to-back extent, so adding works in the CMS
+	 * grows the field without washing the whole thing out or flattening it.
+	 * Isotropic enough that one radius serves every view angle.
+	 */
+	const cloudRadius = Math.max(
+		200,
+		Math.max(...nodes.map((n) => Math.hypot(n.x, n.y, n.z))),
+	);
+	const fogNear = CAMERA_DISTANCE - cloudRadius;
+	const fogSpan = 2 * cloudRadius;
+
+	/** How present something at this distance should look: 1 near, →0 far. */
+	function depthCue(dist: number) {
+		const t = Math.min(1, Math.max(0, (dist - fogNear) / fogSpan));
+		return Math.exp(-FOG_DENSITY * t);
+	}
 	// alpha is the simulation's temperature: 0 at rest, bumped back up when a
 	// node is dragged so its neighbours re-arrange around it.
 	let alpha = 0;
@@ -374,6 +445,7 @@ export function initGraph() {
 	/** How much of the top and bottom edges the chrome is covering, in px. */
 	let chromeTop = MOBILE_TOP_FALLBACK;
 	let chromeBottom = MOBILE_BOTTOM_FALLBACK;
+	let chromeLeft = LEGEND_GUTTER_MAX;
 
 	/**
 	 * Measures the legend and the bottom bar so the graph can be framed in
@@ -389,6 +461,35 @@ export function initGraph() {
 		chromeBottom = bar
 			? Math.max(0, height - bar.getBoundingClientRect().top) + CHROME_CLEARANCE
 			: MOBILE_BOTTOM_FALLBACK;
+		// Measured, like the other two, rather than taken as a fraction of the
+		// window. A fifth of the viewport happened to clear the legend on a
+		// laptop and was never really a measurement — it left titles printing
+		// over the category counts as soon as the camera moved left, which
+		// opening a work now does.
+		chromeLeft =
+			legend && width >= DESKTOP_FROM
+				? // Capped against the window, not against a fixed number: the
+					// old cap of 240px was narrower than the legend itself, so
+					// it quietly threw the measurement away.
+					Math.min(width * LEGEND_GUTTER_MAX_SHARE, legend.getBoundingClientRect().right + CHROME_CLEARANCE)
+				: Math.min(width * LEGEND_GUTTER, LEGEND_GUTTER_MAX);
+	}
+
+	/** Where the interface is sitting on top of the canvas, in canvas space. */
+	function chromeBoxes() {
+		const rect = canvas.getBoundingClientRect();
+		const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+		for (const el of document.querySelectorAll('.station, .cta, .bottom-bar')) {
+			const r = el.getBoundingClientRect();
+			if (r.width === 0 || r.height === 0) continue;
+			boxes.push({
+				x0: r.left - rect.left,
+				y0: r.top - rect.top,
+				x1: r.right - rect.left,
+				y1: r.bottom - rect.top,
+			});
+		}
+		return boxes;
 	}
 
 	function resize() {
@@ -412,15 +513,36 @@ export function initGraph() {
 	 * this, so the graph is centred in the space it actually has rather than in
 	 * the window, which is what left a third of a phone screen empty below it.
 	 */
-	function viewFrame() {
+	/**
+	 * How much of the canvas the detail panel is sitting on top of.
+	 *
+	 * The panel is fixed over the right-hand side rather than laid out beside
+	 * the canvas, so opening it resizes nothing and the graph would happily go
+	 * on centring itself underneath. Anything that wants to put something
+	 * where it can actually be seen has to measure this.
+	 */
+	function panelCover() {
+		const panel = document.getElementById('detail-window');
+		if (!panel || panel.hidden || panel.classList.contains('closing')) return 0;
+		return Math.min(width * 0.8, panel.getBoundingClientRect().width);
+	}
+
+	/**
+	 * The part of the canvas worth drawing into. `besidePanel` excludes the
+	 * room an open panel has taken, for the one case that needs it — framing
+	 * the work you just opened next to the panel showing it.
+	 */
+	function viewFrame(besidePanel = false) {
 		const desktop = width >= DESKTOP_FROM;
-		const left = desktop ? Math.min(width * LEGEND_GUTTER, LEGEND_GUTTER_MAX) : 0;
+		const left = desktop ? chromeLeft : 0;
 		const top = desktop ? 0 : chromeTop;
 		const bottom = desktop ? 0 : chromeBottom;
+		const right = besidePanel && desktop ? panelCover() : 0;
+		const usable = Math.max(160, width - left - right);
 		return {
-			cx: left + (width - left) / 2,
+			cx: left + usable / 2,
 			cy: top + (height - top - bottom) / 2,
-			halfW: (width - left) / 2,
+			halfW: usable / 2,
 			halfH: (height - top - bottom) / 2,
 		};
 	}
@@ -570,6 +692,88 @@ export function initGraph() {
 	}
 
 	/**
+	 * Move the camera onto the work that just opened, into the room the panel
+	 * has left.
+	 *
+	 * Opening a work used to leave the field exactly where it was, which
+	 * often meant the work you were reading about was somewhere behind the
+	 * panel. The point of having the graph and the text on screen together is
+	 * that the graph answers the question the text raises — what is this near?
+	 * — so the work is put in the middle of what you can still see, with
+	 * enough of its company around it to show which part of the field you are
+	 * in.
+	 *
+	 * The angle is deliberately left alone. Turning the field as well would
+	 * make opening a work a bigger movement than closing one, and the reader
+	 * did not ask to go anywhere — they asked to read something.
+	 */
+	function focusWork(index: number) {
+		// On a phone the panel is the whole screen; there is no beside it.
+		if (!width || !height || width < DESKTOP_FROM) return;
+		const node = nodes[index];
+
+		const free = viewFrame(true);
+		const whole = viewFrame();
+		const here = projectAt(node, yawTarget, pitchTarget);
+
+		// Its company: whatever is nearest *on screen*, which is the only
+		// sense of "near" the reader can see. Ranking by distance through the
+		// layout instead put works behind the camera in the running and framed
+		// half the field to reach them — the view came out looking like the
+		// whole graph nudged sideways rather than like somewhere.
+		//
+		// Works it is actually linked to count as closer than they are, so a
+		// related work just outside the frame is preferred to an unrelated one
+		// just inside it, without letting one distant link open the frame up.
+		const away = (i: number) => {
+			const pt = projectAt(nodes[i], yawTarget, pitchTarget);
+			const d = Math.hypot(pt.x - here.x, pt.y - here.y);
+			return neighbours[index].has(i) ? d * RELATED_BIAS : d;
+		};
+		const company = nodes
+			.map((_, i) => i)
+			.filter((i) => i !== index)
+			.sort((a, b) => away(a) - away(b))
+			.slice(0, COMPANY);
+
+		let halfX = 0;
+		let halfY = 0;
+		for (const i of company) {
+			const pt = projectAt(nodes[i], yawTarget, pitchTarget);
+			halfX = Math.max(halfX, Math.abs(pt.x - here.x));
+			halfY = Math.max(halfY, Math.abs(pt.y - here.y));
+		}
+		// Half-extents are measured from the work outwards, so the fit uses the
+		// whole half-frame; a lone work with no spread keeps the zoom it had.
+		if (halfX > 0 && halfY > 0) {
+			zoomTarget = Math.max(
+				MIN_ZOOM,
+				Math.min(
+					MAX_ZOOM,
+					Math.min(
+						(free.halfW * WORK_FOCUS_TARGET) / halfX,
+						(free.halfH * WORK_FOCUS_TARGET) / halfY,
+					),
+				),
+			);
+		}
+		// The work itself is the centre, not the middle of the group: it is the
+		// thing being read about, and a group centre would let it drift to the
+		// edge whenever its company happened to sit to one side.
+		//
+		// Offset, because the pan is applied against the frame the canvas is
+		// actually drawn in — the whole one — while the place we want the work
+		// to appear is the middle of what the panel has left. Without this the
+		// work is centred in the viewport and so lands underneath the panel
+		// showing it, which is the exact problem this is here to fix.
+		panXTarget = here.x - (free.cx - whole.cx) / zoomTarget;
+		panYTarget = here.y - (free.cy - whole.cy) / zoomTarget;
+		// The reader put the camera here; a later resize shouldn't refit the
+		// whole category over the top of it.
+		autoFit = false;
+	}
+
+	/**
 	 * The same bearing expressed as the shortest way round from where we are,
 	 * so the field never takes the long way to an angle a few degrees away.
 	 */
@@ -615,18 +819,21 @@ export function initGraph() {
 			const z2 = y * sinPitch + z1 * cosPitch;
 			// Keep the divisor away from zero so a node swinging behind the
 			// camera can't produce an infinite scale.
-			const depth = CAMERA_DISTANCE / Math.max(200, CAMERA_DISTANCE - z2);
+			const dist = Math.max(200, CAMERA_DISTANCE - z2);
+			const depth = CAMERA_DISTANCE / dist;
 			return {
 				// panX/panY are in unzoomed cloud units and hold the point the
 				// camera is centred on.
 				sx: view.cx + (x1 * depth * fit - panX) * zoom,
 				sy: view.cy + (y2 * depth * fit - panY) * zoom,
 				depth,
+				dist,
 			};
 		};
 
 		const circle = place(drift, driftB, drift * 0.6);
 		node.depth = circle.depth;
+		node.dist = circle.dist;
 		node.sx = circle.sx;
 		node.sy = circle.sy;
 		node.sr = radiusOf(node) * circle.depth * zoom * Math.max(RADIUS_FLOOR, fit * 1.5);
@@ -674,13 +881,16 @@ export function initGraph() {
 	let releaseTimer: number | undefined;
 	/** The work open in the side panel — drawn as a held-down marker. */
 	let active: number | null = null;
-	/** Whether a panel was already showing when the current press started. */
-	let panelWasOpen = false;
-
-	/** True while a work, or About & Contact, is showing over the graph. */
+	/**
+	 * True while a work, or About & Contact, is showing over the graph.
+	 *
+	 * Read at pointer-up rather than snapshotted at pointer-down: the panel
+	 * no longer closes itself the moment the canvas is pressed, so by the time
+	 * a press ends this still says what it said when the press began.
+	 */
 	function isPanelOpen() {
 		const panel = document.getElementById('detail-window');
-		return !!panel && !panel.hidden;
+		return !!panel && !panel.hidden && !panel.classList.contains('closing');
 	}
 	let filter = ALL_CATEGORIES.slug;
 
@@ -703,19 +913,32 @@ export function initGraph() {
 		const y = clientY - rect.top;
 		let best: number | null = null;
 		let bestDistance = Infinity;
+		let spare: number | null = null;
+		let spareDistance = Infinity;
 		for (let i = 0; i < nodes.length; i++) {
 			const node = nodes[i];
-			if (!inFilter(node)) continue;
 			const distance = Math.hypot(node.sx - x, node.sy - y);
 			// Generous hit slop: these are small targets, the crosshair cursor
 			// makes precise aiming harder than a normal pointer, and on a phone
 			// the nodes are smaller still.
-			if (distance < node.sr + HIT_SLOP && distance < bestDistance) {
-				bestDistance = distance;
-				best = i;
+			if (distance >= node.sr + HIT_SLOP) continue;
+			// Works outside the shown category are still reachable — they are
+			// dimmed, not disabled, and a dot you can see but not point at is a
+			// worse lie than one that isn't drawn. They're kept in a separate
+			// bucket so they can never win a contest against a work that *is*
+			// being shown: dimming something must not make its neighbour harder
+			// to hit.
+			if (inFilter(node)) {
+				if (distance < bestDistance) {
+					bestDistance = distance;
+					best = i;
+				}
+			} else if (distance < spareDistance) {
+				spareDistance = distance;
+				spare = i;
 			}
 		}
-		return best;
+		return best ?? spare;
 	}
 
 	function open(index: number) {
@@ -729,6 +952,22 @@ export function initGraph() {
 			updateHud();
 		}
 		location.hash = `#work/${nodes[index].id}`;
+	}
+
+	/**
+	 * What clicking a work does.
+	 *
+	 * A work outside the category being shown is dimmed, not disabled, so a
+	 * click on one is a request for it rather than a mis-click: its collection
+	 * is selected — which is also the answer to "how do I get to that one?" —
+	 * and then it opens. The selection lands first so the field is already
+	 * showing the right collection by the time the panel arrives; focusWork
+	 * then has the last word on where the camera ends up, because the work
+	 * you asked for is more specific than the category it belongs to.
+	 */
+	function activate(index: number) {
+		if (!inFilter(nodes[index])) setFilter(nodes[index].sectionSlug);
+		open(index);
 	}
 
 	/** Distance between the first two fingers down, in screen pixels. */
@@ -752,6 +991,20 @@ export function initGraph() {
 		}
 		const node = nodes[hovered];
 		hud.hidden = false;
+
+		// A work outside the category being shown gets its name and nothing
+		// else. It is not what the reader is looking at, so a full slip for it
+		// would be an interruption — but an unlabelled dot they can't identify
+		// is why they'd feel stuck in a category in the first place. The name
+		// is enough to answer "what is that one?" and to make it obvious the
+		// dot is still live.
+		hud.classList.toggle('bare', !inFilter(node));
+		if (!inFilter(node)) {
+			hud.innerHTML = `<span class="hud-title">${escapeHtml(node.title)}</span>`;
+			hudSize = { width: hud.offsetWidth, height: hud.offsetHeight };
+			positionHud();
+			return;
+		}
 
 		// One row per field, each labelled the way a survey slip is — the
 		// preview used to run these together and became unreadable at a glance.
@@ -839,7 +1092,7 @@ export function initGraph() {
 			return;
 		}
 		if (!target.closest('[data-hud-open]')) return;
-		if (hovered !== null) open(hovered);
+		if (hovered !== null) activate(hovered);
 	});
 
 	// --- Render -----------------------------------------------------------
@@ -867,16 +1120,9 @@ export function initGraph() {
 		ctx.clearRect(0, 0, width, height);
 		for (const node of nodes) project(node);
 
-		// Normalise depth across whatever the cloud looks like this frame, so the
-		// near/far contrast stays strong at every zoom and rotation.
-		let minDepth = Infinity;
-		let maxDepth = -Infinity;
-		for (const node of nodes) {
-			if (node.depth < minDepth) minDepth = node.depth;
-			if (node.depth > maxDepth) maxDepth = node.depth;
-		}
-		const span = maxDepth - minDepth || 1;
-		for (const node of nodes) node.near = (node.depth - minDepth) / span;
+		// Read off each node's actual distance, so two works side by side are
+		// shaded alike and turning the field doesn't re-rank everything.
+		for (const node of nodes) node.near = depthCue(node.dist);
 
 		const anyHighlight = nodes.some((node) => node.glow > 0.02);
 		/** 1 while a single category is being shown, 0 while showing everything. */
@@ -924,7 +1170,13 @@ export function initGraph() {
 		const hits = (a: Box, b: Box) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
 
 		const labelled = new Set<number>();
-		const taken: Box[] = [];
+		// The chrome is claimed before any title is: the legend, the About
+		// button and (on a phone) the bottom bar are opaque boxes sitting over
+		// the canvas, and a title printed under one is just lost text. The
+		// framing keeps the *bubbles* out of the gutter, but a title is drawn
+		// from its node's centre outwards and so can still reach into it —
+		// which is what moving the camera onto an opened work made visible.
+		const taken: Box[] = chromeBoxes();
 		// The bubbles themselves are obstacles: a title printed across another
 		// work's node was the ugliest case, and the one the label-versus-label
 		// test alone never caught.
@@ -1129,10 +1381,6 @@ export function initGraph() {
 		pointerId = event.pointerId;
 		pointerMoved = false;
 		pointerStart = { x: event.clientX, y: event.clientY };
-		// window.ts closes an open panel on pointerdown. Noting it here keeps
-		// one press from doing two things — closing the panel *and* clearing
-		// the category — which would feel like the site overshooting.
-		panelWasOpen = isPanelOpen();
 		const hit = nodeAt(event.clientX, event.clientY);
 		if (hit !== null) {
 			dragNode = hit;
@@ -1235,7 +1483,9 @@ export function initGraph() {
 			if (event.pointerType !== 'mouse') {
 				// No hover on touch, so a tap has to do both jobs: the first one
 				// on a node previews it, a second on the same node opens it.
-				if (hit !== hovered) {
+				// With a panel already up there is nothing to preview — the tap
+				// is a change of subject, so it goes straight through.
+				if (hit !== hovered && !isPanelOpen()) {
 					const hadPreview = hovered !== null;
 					holdHover();
 					hovered = hit;
@@ -1247,9 +1497,25 @@ export function initGraph() {
 					return;
 				}
 			}
-			if (hit !== null) open(hit);
-			else clearFilterIfAny();
+			if (hit !== null) activate(hit);
+			else dismissOrClear();
 		}
+	}
+
+	/**
+	 * A click on the empty field, with nothing under it: undo one thing.
+	 *
+	 * The panel goes first because it is the larger claim on the screen, and
+	 * only then the category. One layer per click is what keeps this feeling
+	 * like an escape key rather than a trapdoor — and a drag or a pinch never
+	 * gets here at all, so turning the field while reading leaves both alone.
+	 */
+	function dismissOrClear() {
+		if (isPanelOpen()) {
+			dismissPanel();
+			return;
+		}
+		clearFilterIfAny();
 	}
 
 	/**
@@ -1266,7 +1532,7 @@ export function initGraph() {
 	 * ruled out before this runs.
 	 */
 	function clearFilterIfAny() {
-		if (panelWasOpen || isPanelOpen()) return;
+		if (isPanelOpen()) return;
 		if (filter === ALL_CATEGORIES.slug) return;
 		setFilter(ALL_CATEGORIES.slug);
 	}
@@ -1304,6 +1570,15 @@ export function initGraph() {
 		// Opening a work from a filtered-out category (a pasted link, say) would
 		// otherwise mark a bubble nobody can see.
 		if (active !== null && !inFilter(nodes[active])) setFilter(ALL_CATEGORIES.slug);
+		if (active === null) return;
+		// A frame late on purpose: the panel is opened by its own listener on
+		// this same event, and how much room it takes can't be measured until
+		// it's there. Which listener runs first depends on component order,
+		// which is not something this should depend on.
+		const target = active;
+		requestAnimationFrame(() => {
+			if (active === target) focusWork(target);
+		});
 	}
 	window.addEventListener('hashchange', syncActive);
 	window.addEventListener('popstate', syncActive);
@@ -1312,12 +1587,11 @@ export function initGraph() {
 	onFilterChange((slug) => {
 		const changed = slug !== filter;
 		filter = slug;
-		// Whatever was under the pointer may have just been filtered away.
-		if (hovered !== null && !inFilter(nodes[hovered])) {
-			hovered = null;
-			canvas.classList.remove('over-node');
-			updateHud();
-		}
+		// Whatever is under the pointer may have just moved in or out of the
+		// shown category, which changes its preview from a full slip to a bare
+		// name or back. Re-render rather than drop it: the dot is still there
+		// and still under the pointer.
+		if (hovered !== null) updateHud();
 		// Turn to face the selection. Re-enables auto-fitting: the reader asked
 		// for this framing, so a later resize should preserve it.
 		if (changed) {
