@@ -13,6 +13,21 @@
 // the content inside can re-lay itself out — a gallery that is one column in a
 // 340px dock and three at 900px.
 
+/**
+ * Closes whatever the panel is showing, from anywhere.
+ *
+ * Lives out here because the graph needs it too: clicking the empty field is
+ * one of the ways out of a panel, and the canvas decides for itself which of
+ * its presses count (a drag past the panel is not a dismissal, and a press on
+ * another work is a change of subject rather than an exit). Both callers go
+ * through the hash so the back button keeps working.
+ */
+export function dismissPanel() {
+	if (!location.hash) return;
+	history.pushState(null, '', location.pathname + location.search);
+	window.dispatchEvent(new HashChangeEvent('hashchange'));
+}
+
 const DESKTOP_QUERY = '(min-width: 721px)';
 const SIZE_KEY = 'window-size';
 const MIN_WIDTH = 320;
@@ -165,10 +180,7 @@ export function initWindow() {
 	 * anything else keyed to what's open (the graph marks the bubble whose work
 	 * is showing) has to be told by hand.
 	 */
-	function dismiss() {
-		history.pushState(null, '', location.pathname + location.search);
-		window.dispatchEvent(new HashChangeEvent('hashchange'));
-	}
+	const dismiss = dismissPanel;
 
 	closeBtn.addEventListener('click', dismiss);
 
@@ -185,6 +197,14 @@ export function initWindow() {
 		// change of what's open; letting this close it first would push a
 		// pointless extra history entry between the two.
 		if (target?.closest?.('a[href^="#"]')) return;
+		// The graph answers for its own canvas. Closing on pointer*down* here
+		// was what made the field unusable with a panel up: it fired on the
+		// first frame of a drag, so you could not turn or zoom the graph while
+		// reading, and it fired before the release that would have opened the
+		// next work, so jumping straight from one work to another dropped you
+		// out instead. The canvas decides at pointer*up*, where it can tell a
+		// click from a drag and a work from empty space.
+		if (target?.closest?.('#graph-canvas')) return;
 		dismiss();
 	});
 

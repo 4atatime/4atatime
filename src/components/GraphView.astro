@@ -96,6 +96,28 @@ const { data } = Astro.props;
 	.hud.below {
 		transform: translate(-50%, 0);
 	}
+
+	/* Naming a work that isn't in the category being shown.
+
+	   Deliberately not the full slip: that work isn't what's being looked at,
+	   so a survey card for it would read as the selection having changed when
+	   it hasn't. A name, tight to the dot, answers "what's that one?" and
+	   nothing more — and because it can't be clicked into, it doesn't need to
+	   be reachable by the pointer either. */
+	.hud.bare {
+		gap: 0;
+		padding: 0.5rem 0.7rem 0.45rem;
+		min-width: 0;
+		border-style: dashed;
+		pointer-events: none;
+	}
+	.hud.bare::before,
+	.hud.bare::after {
+		display: none;
+	}
+	.hud.bare :global(.hud-title) {
+		font-size: 0.85rem;
+	}
 	/* Surveyor's corner ticks, drawn as two L-shaped borders rather than four
 	   elements. */
 	.hud::before,
