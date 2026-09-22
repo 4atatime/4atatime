@@ -8,6 +8,14 @@
 // wheel to zoom, drag a node to reposition it (which re-heats the simulation),
 // hover to highlight a node and its neighbours, click to open it.
 //
+// With three additions that orbiting alone made necessary. Turning is a
+// rotation, so a field that has drifted off to one side cannot be hauled
+// back: pulling on empty space just spins it somewhere else. So the wheel
+// zooms about the pointer rather than the middle of the frame, shift-drag
+// slides the view outright, and a leash stops the camera reaching anywhere
+// that would leave the works off screen. When most of the field has gone out
+// of frame anyway, a way back is offered.
+//
 // Nothing here snaps. The camera eases toward a target rather than tracking
 // the pointer directly, highlights fade in and out, every node drifts on its
 // own slow sine so a settled graph still breathes, and a node under the
@@ -122,6 +130,21 @@ const CHROME_CLEARANCE = 14;
 /** Used only until the real elements have been measured. */
 const MOBILE_TOP_FALLBACK = 200;
 const MOBILE_BOTTOM_FALLBACK = 90;
+/**
+ * How much of the field must stay in frame, in pixels.
+ *
+ * Turning is a rotation, so a field that has drifted off the side cannot be
+ * dragged back — pulling on empty space just spins the cloud somewhere else,
+ * and the usual recovery of "grab it and haul it in" does nothing. The leash
+ * makes being lost impossible rather than merely recoverable: the camera can
+ * go anywhere that leaves this much of the works on screen, and no further.
+ */
+const PAN_KEEP = 130;
+/** Below this share of works in frame, offer the way back. */
+const LOST_BELOW = 0.5;
+/** And above this, put the offer away. Two figures, so it can't flicker. */
+const FOUND_ABOVE = 0.72;
+
 const IDLE_SPIN = 0.0004; // radians/frame; stops the moment you touch it
 const IDLE_RESUME_MS = 2600;
 const MIN_ZOOM = 0.35;
@@ -144,6 +167,34 @@ const HIT_SLOP = 18;
 /** How far a press may travel and still be a click rather than a drag. */
 const MOUSE_SLOP = 4;
 const TOUCH_SLOP = 10;
+
+// --- The sky --------------------------------------------------------------
+// Stars are drawn into the same canvas as the works, through the same
+// rotation, rather than tiled on as a CSS image. A wallpaper stays put while
+// the field turns, which is exactly what gives away that it is a picture
+// behind a picture; sharing the camera is the whole difference between a
+// backdrop and a place.
+//
+// They are not, however, at the same scale. A star is effectively at infinity:
+// turning your head sweeps the sky across your view, but walking toward it
+// gets you nowhere. So rotation applies in full, while zoom and pan are
+// damped hard — enough parallax to sit behind the works, not enough to travel
+// with them.
+const STAR_COUNT = 460;
+/** Spread of the sky in view: bigger means the stars sit further apart. */
+const STAR_FOCAL = 0.58;
+/** How much zoom reaches the sky at all. Near zero would be a flat wallpaper
+ * again; near one would fly the stars past you like snow. */
+const STAR_ZOOM = 0.2;
+/** The same for panning, damped harder still — lateral movement is what
+ * distance robs from a parallax first. */
+const STAR_PARALLAX = 0.07;
+/** A star this far off the viewing axis is behind you; stop drawing it. */
+const STAR_FRONT = 0.3;
+/** Twinkle: how much of a star's brightness the slow pulse takes away. */
+const STAR_TWINKLE = 0.42;
+/** How far a star wanders, in pixels, over its cycle. */
+const STAR_WANDER = 2.2;
 
 // --- Idle drift -----------------------------------------------------------
 // Scaled with the layout spread, so the drift stays the same fraction of the
@@ -340,6 +391,7 @@ function readTheme(root: HTMLElement) {
 		// those are tuned for text and UI edges; see the note in tokens.css.
 		node: parseColor(token('--graph-node')),
 		link: parseColor(token('--graph-link')),
+		star: parseColor(token('--sky-star')),
 		// Far nodes are blended toward the page colour — atmospheric perspective,
 		// the same trick that makes distant hills go pale.
 		bg: parseColor(token('--bg')),
@@ -399,6 +451,45 @@ export function initGraph() {
 		labelFade: 0,
 	}));
 	const links = data.links;
+
+	/**
+	 * A star: a direction to look in, plus how it burns. Positions are
+	 * directions rather than points because everything in the sky is the same
+	 * distance away — infinitely far — so only the bearing matters.
+	 */
+	const stars = (() => {
+		// Its own generator, so adding or removing a work can't reshuffle the
+		// sky. Same seed every load: the stars are a fixed backdrop, not
+		// something that redecorates itself on refresh.
+		const sky = mulberry32(0x5c1e);
+		const out = [];
+		for (let i = 0; i < STAR_COUNT; i++) {
+			// Evenly over the sphere, not evenly over latitude and longitude,
+			// which would crowd both poles.
+			const z = sky() * 2 - 1;
+			const a = sky() * Math.PI * 2;
+			const r = Math.sqrt(1 - z * z);
+			// Cubed, so most are specks and a handful carry. A sky of evenly
+			// sized dots reads as a texture; the variation is what makes it
+			// read as distance.
+			const roll = sky();
+			const size = 0.35 + roll * roll * roll * 1.5;
+			out.push({
+				dx: r * Math.cos(a),
+				dy: r * Math.sin(a),
+				dz: z,
+				size,
+				// Bigger stars are brighter, but not strictly: a small bright
+				// one reads as far and hot, which is half of what gives a sky
+				// its depth.
+				base: 0.3 + (size / 1.85) * 0.55 + sky() * 0.3,
+				phase: sky() * Math.PI * 2,
+				rate: 0.0004 + sky() * 0.0011,
+				wander: sky() * Math.PI * 2,
+			});
+		}
+		return out;
+	})();
 
 	// Adjacency, for the "related works" highlight.
 	const neighbours: Set<number>[] = nodes.map(() => new Set<number>());
@@ -710,6 +801,87 @@ export function initGraph() {
 		);
 	}
 
+	/** The cloud's extent in world units at a given bearing. */
+	function cloudBounds(atYaw: number, atPitch: number) {
+		let minX = Infinity;
+		let maxX = -Infinity;
+		let minY = Infinity;
+		let maxY = -Infinity;
+		for (const node of nodes) {
+			const pt = projectAt(node, atYaw, atPitch);
+			if (pt.x < minX) minX = pt.x;
+			if (pt.x > maxX) maxX = pt.x;
+			if (pt.y < minY) minY = pt.y;
+			if (pt.y > maxY) maxY = pt.y;
+		}
+		return { minX, maxX, minY, maxY };
+	}
+
+	/**
+	 * Keep the camera on its leash: it may look anywhere that still shows
+	 * PAN_KEEP pixels of the field.
+	 *
+	 * Run every frame rather than only after a gesture, because turning the
+	 * field moves the works without touching the pan — so a view that was
+	 * legal when you let go can drift out of bounds on its own.
+	 */
+	function clampPan() {
+		if (!width || !height) return;
+		const bounds = cloudBounds(yawTarget, pitchTarget);
+		const view = viewFrame();
+		const slackX = Math.max(0, view.halfW - Math.min(PAN_KEEP, view.halfW * 0.7)) / zoomTarget;
+		const slackY = Math.max(0, view.halfH - Math.min(PAN_KEEP, view.halfH * 0.7)) / zoomTarget;
+		panXTarget = Math.min(Math.max(panXTarget, bounds.minX - slackX), bounds.maxX + slackX);
+		panYTarget = Math.min(Math.max(panYTarget, bounds.minY - slackY), bounds.maxY + slackY);
+	}
+
+	/**
+	 * Zoom about a point on screen, leaving whatever is under it where it is.
+	 *
+	 * This is the other half of the navigation problem. Zooming about the
+	 * centre of the frame means the only way to reach something off to one
+	 * side is to zoom out until it arrives, then zoom in and watch it slide
+	 * away again. Anchoring to the pointer turns that into one gesture:
+	 * point at where you want to be and go there.
+	 */
+	function zoomAt(next: number, px: number, py: number) {
+		const view = viewFrame();
+		const from = zoomTarget;
+		const to = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next));
+		if (to === from) return;
+		// The world point currently under the pointer, which must not move.
+		const wx = panXTarget + (px - view.cx) / from;
+		const wy = panYTarget + (py - view.cy) / from;
+		zoomTarget = to;
+		panXTarget = wx - (px - view.cx) / to;
+		panYTarget = wy - (py - view.cy) / to;
+		clampPan();
+	}
+
+	/** Slide the view by a screen-space amount. */
+	function panBy(dx: number, dy: number) {
+		panXTarget -= dx / zoomTarget;
+		panYTarget -= dy / zoomTarget;
+		clampPan();
+	}
+
+	/** What share of the works are currently inside the usable frame. */
+	function inFrame() {
+		const view = viewFrame();
+		let seen = 0;
+		for (const node of nodes) {
+			if (
+				node.sx > view.cx - view.halfW &&
+				node.sx < view.cx + view.halfW &&
+				node.sy > view.cy - view.halfH &&
+				node.sy < view.cy + view.halfH
+			) {
+				seen++;
+			}
+		}
+		return nodes.length ? seen / nodes.length : 1;
+	}
+
 	/** Every node, or just the ones in a category. */
 	function membersOf(slug: string) {
 		return slug === ALL_CATEGORIES.slug ? nodes : nodes.filter((n) => n.sectionSlug === slug);
@@ -910,8 +1082,12 @@ export function initGraph() {
 	let hovered: number | null = null;
 	let dragNode: number | null = null;
 	let orbiting = false;
+	/** True while the press is sliding the view rather than turning it. */
+	let panning = false;
 	let pointerMoved = false;
 	let pointerStart = { x: 0, y: 0 };
+	/** Last pointer position while panning, so each move is a delta. */
+	let panFrom = { x: 0, y: 0 };
 	let pointerId: number | null = null;
 	/** True while the pointer is inside the HUD, which keeps it open and still. */
 	let hudPinned = false;
@@ -922,6 +1098,8 @@ export function initGraph() {
 	 * fighting each other.
 	 */
 	const touches = new Map<number, { x: number; y: number }>();
+	/** Where the fingers were centred last frame, for the pan half of a pinch. */
+	let pinchLast: { x: number; y: number } | null = null;
 	/** Set when a second finger lands: the span and zoom to scale from. */
 	let pinchStartSpan = 0;
 	let pinchStartZoom = 1;
@@ -1019,6 +1197,14 @@ export function initGraph() {
 	function activate(index: number) {
 		if (!inFilter(nodes[index])) setFilter(nodes[index].sectionSlug);
 		open(index);
+	}
+
+	/** The point between the first two fingers, in canvas space. */
+	function touchMid(): { x: number; y: number } | null {
+		const [a, b] = [...touches.values()];
+		if (!a || !b) return null;
+		const rect = canvas.getBoundingClientRect();
+		return { x: (a.x + b.x) / 2 - rect.left, y: (a.y + b.y) / 2 - rect.top };
 	}
 
 	/** Distance between the first two fingers down, in screen pixels. */
@@ -1167,8 +1353,59 @@ export function initGraph() {
 		}
 	}
 
+	/**
+	 * The sky, drawn first and underneath everything.
+	 *
+	 * Rotation is applied in full and then divided through by how far along
+	 * the viewing axis the star sits, which is ordinary perspective for a
+	 * sphere around the camera: stars near the middle of the view barely
+	 * move, ones near the edge sweep quickly. That difference is most of what
+	 * stops it reading as a flat image being dragged about.
+	 */
+	function drawSky() {
+		const view = viewFrame();
+		const cosYaw = Math.cos(yaw);
+		const sinYaw = Math.sin(yaw);
+		const cosPitch = Math.cos(pitch);
+		const sinPitch = Math.sin(pitch);
+		const focal = Math.min(width, height) * STAR_FOCAL * (1 - STAR_ZOOM + STAR_ZOOM * zoom);
+		const shiftX = -panX * zoom * STAR_PARALLAX;
+		const shiftY = -panY * zoom * STAR_PARALLAX;
+		const still = reducedMotion.matches;
+
+		for (const star of stars) {
+			const x1 = star.dx * cosYaw + star.dz * sinYaw;
+			const z1 = -star.dx * sinYaw + star.dz * cosYaw;
+			const y2 = star.dy * cosPitch - z1 * sinPitch;
+			const z2 = star.dy * sinPitch + z1 * cosPitch;
+			// Behind the camera, or so far to the side that perspective would
+			// fling it across the screen.
+			if (z2 < STAR_FRONT) continue;
+
+			// A slow, aimless float. Too small to watch happening, big enough
+			// that the sky is never quite the same twice.
+			const wander = still ? 0 : STAR_WANDER;
+			const px =
+				view.cx + shiftX + (x1 / z2) * focal + Math.sin(clock * 0.00006 + star.wander) * wander;
+			const py =
+				view.cy + shiftY + (y2 / z2) * focal + Math.cos(clock * 0.00005 + star.wander) * wander;
+			if (px < -4 || py < -4 || px > width + 4 || py > height + 4) continue;
+
+			// Brightness breathes rather than blinks: a sine, not a flicker.
+			const pulse = still ? 1 - STAR_TWINKLE / 2 : 1 - STAR_TWINKLE * (0.5 + 0.5 * Math.sin(clock * star.rate + star.phase));
+			// Stars at the edge of view are being seen at a glancing angle;
+			// fading them there hides the hard edge of the culling test.
+			const edge = Math.min(1, (z2 - STAR_FRONT) / 0.25);
+			ctx.beginPath();
+			ctx.arc(px, py, star.size, 0, Math.PI * 2);
+			ctx.fillStyle = rgba(theme.star, star.base * pulse * edge);
+			ctx.fill();
+		}
+	}
+
 	function draw() {
 		ctx.clearRect(0, 0, width, height);
+		drawSky();
 		for (const node of nodes) project(node);
 
 		// Read off each node's actual distance, so two works side by side are
@@ -1394,6 +1631,10 @@ export function initGraph() {
 			yawTarget += IDLE_SPIN;
 		}
 
+		// Turning moves the works without touching the pan, so the leash has
+		// to be re-checked every frame rather than only after a gesture.
+		clampPan();
+
 		// Ease the camera toward wherever the input put the target.
 		yaw += (yawTarget - yaw) * CAMERA_EASE;
 		pitch += (pitchTarget - pitch) * CAMERA_EASE;
@@ -1411,12 +1652,15 @@ export function initGraph() {
 
 		draw();
 		positionHud();
+		updateRecentre();
 		requestAnimationFrame(frame);
 	}
 
 	// --- Pointer ----------------------------------------------------------
 	canvas.addEventListener('pointerdown', (event) => {
-		if (event.button !== 0) return;
+		// Primary to turn or open, middle to slide. Everything else — right
+		// button, back, forward — belongs to the browser.
+		if (event.button !== 0 && event.button !== 1) return;
 		touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
 		lastInteraction = performance.now();
 
@@ -1426,6 +1670,7 @@ export function initGraph() {
 		if (pinching()) {
 			pinchStartSpan = touchSpan();
 			pinchStartZoom = zoomTarget;
+			pinchLast = touchMid();
 			autoFit = false;
 			orbiting = false;
 			dragNode = null;
@@ -1436,8 +1681,17 @@ export function initGraph() {
 		pointerId = event.pointerId;
 		pointerMoved = false;
 		pointerStart = { x: event.clientX, y: event.clientY };
+		panFrom = { x: event.clientX, y: event.clientY };
 		const hit = nodeAt(event.clientX, event.clientY);
-		if (hit !== null) {
+		// Hold shift, or use the middle button, to slide the view instead of
+		// turning it. Turning is the default because it is what the field is
+		// for; sliding is the thing you reach for when something has ended up
+		// off to one side, and it has to be available without first putting
+		// down whatever you were looking at.
+		if (event.shiftKey || event.button === 1) {
+			panning = true;
+			autoFit = false;
+		} else if (hit !== null) {
 			dragNode = hit;
 		} else {
 			orbiting = true;
@@ -1457,15 +1711,25 @@ export function initGraph() {
 			touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
 		}
 
-		// Two fingers: zoom around the span between them, and nothing else.
+		// Two fingers: zoom about the point between them, and let that point
+		// travel — a pinch that can also carry the field with it is how you
+		// get somewhere on a phone, where there is no modifier key to hold.
 		if (pinching()) {
 			const span = touchSpan();
-			if (pinchStartSpan > 0 && span > 0) {
-				zoomTarget = Math.max(
-					MIN_ZOOM,
-					Math.min(MAX_ZOOM, (pinchStartZoom * span) / pinchStartSpan),
-				);
+			const mid = touchMid();
+			if (mid && pinchLast) panBy(mid.x - pinchLast.x, mid.y - pinchLast.y);
+			if (pinchStartSpan > 0 && span > 0 && mid) {
+				zoomAt((pinchStartZoom * span) / pinchStartSpan, mid.x, mid.y);
 			}
+			pinchLast = mid;
+			return;
+		}
+
+		if (pointerId === event.pointerId && panning) {
+			panBy(event.clientX - panFrom.x, event.clientY - panFrom.y);
+			panFrom = { x: event.clientX, y: event.clientY };
+			const moved = Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y);
+			if (moved > MOUSE_SLOP) pointerMoved = true;
 			return;
 		}
 
@@ -1523,17 +1787,20 @@ export function initGraph() {
 		if (wasPinching) {
 			pinchStartSpan = touchSpan();
 			pinchStartZoom = zoomTarget;
+			pinchLast = touchMid();
 			pointerMoved = true;
 			return;
 		}
 
 		if (pointerId !== event.pointerId) return;
 		const wasDragNode = dragNode;
+		const wasPanning = panning;
 		orbiting = false;
+		panning = false;
 		dragNode = null;
 		pointerId = null;
 		lastInteraction = performance.now();
-		if (!pointerMoved) {
+		if (!pointerMoved && !wasPanning) {
 			const hit = wasDragNode ?? nodeAt(event.clientX, event.clientY);
 			if (event.pointerType !== 'mouse') {
 				// No hover on touch, so a tap has to do both jobs: the first one
@@ -1607,9 +1874,11 @@ export function initGraph() {
 			event.preventDefault();
 			lastInteraction = performance.now();
 			autoFit = false;
-			zoomTarget = Math.max(
-				MIN_ZOOM,
-				Math.min(MAX_ZOOM, zoomTarget * Math.exp(-event.deltaY * 0.0015)),
+			const rect = canvas.getBoundingClientRect();
+			zoomAt(
+				zoomTarget * Math.exp(-event.deltaY * 0.0015),
+				event.clientX - rect.left,
+				event.clientY - rect.top,
 			);
 		},
 		{ passive: false },
@@ -1672,6 +1941,44 @@ export function initGraph() {
 			updateHud();
 		});
 	});
+
+	// --- Finding your way back --------------------------------------------
+	const recentre = document.getElementById('graph-recentre');
+	/** True while the offer is up, so the two thresholds can differ. */
+	let offering = false;
+
+	function goHome() {
+		autoFit = true;
+		focusOn(filter);
+		lastInteraction = performance.now();
+	}
+
+	recentre?.addEventListener('click', goHome);
+	document.addEventListener('keydown', (event) => {
+		if (event.key !== '0' && event.key !== 'Home') return;
+		// Not while someone is typing into a field.
+		const el = document.activeElement;
+		if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
+		goHome();
+	});
+
+	/** Show the way back once most of the field has left the frame. */
+	function updateRecentre() {
+		if (!recentre) return;
+		const share = inFrame();
+		const next = offering ? share < FOUND_ABOVE : share < LOST_BELOW;
+		if (next === offering) return;
+		offering = next;
+		if (next) {
+			recentre.hidden = false;
+			requestAnimationFrame(() => recentre.classList.add('showing'));
+		} else {
+			recentre.classList.remove('showing');
+			window.setTimeout(() => {
+				if (!offering) recentre.hidden = true;
+			}, 240);
+		}
+	}
 
 	const observer = new ResizeObserver(() => {
 		resize();
