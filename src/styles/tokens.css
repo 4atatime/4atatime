@@ -51,15 +51,14 @@
 	   survive that treatment and the far half of the cloud still reads. */
 	--graph-node: #465268;
 	--graph-link: #8b99ab;
-	/* The sky behind the field. Three drifts of colour and a layer of dust,
-	   all of it well under what you'd call visible — the test is that you
-	   should not be able to say what it is, only that the page isn't a flat
-	   fill. Daylight, so the drifts are warm and the dust is dark. */
-	--sky-a: rgba(140 160 196 / 0.32);
-	--sky-b: rgba(198 168 146 / 0.27);
-	--sky-c: rgba(132 186 172 / 0.2);
-	--stardust: url('/textures/stardust-light.svg');
-	--grain-opacity: 0.075;
+	/* The sky behind the field: three wide drifts of colour, with the stars
+	   themselves drawn onto the canvas so they share the camera. Daylight, so
+	   the drifts are warm and the stars are dark against them. */
+	--sky-a: rgba(146 164 194 / 0.24);
+	--sky-b: rgba(196 172 152 / 0.2);
+	--sky-c: rgba(140 184 172 / 0.15);
+	--sky-star: #5a6a86;
+	--grain-opacity: 0.06;
 	/* Hairlines in the notation styling. A touch darker than --border, which
 	   is tuned for filled edges: a 1px rule at --border all but disappears. */
 	--rule: #c3ced6;
@@ -89,12 +88,13 @@
 	   #2a303c on a near-black page is not a line, it's a rumour. */
 	--graph-node: #aab7ce;
 	--graph-link: #55627a;
-	/* Night: the drifts go cold and carry further, and the dust is light.
-	   A near-black page can hold more of this than a white one before it
-	   stops looking like paper and starts looking like a gradient. */
-	--sky-a: rgba(86 122 190 / 0.36);
-	--sky-b: rgba(152 106 176 / 0.26);
-	--sky-c: rgba(88 180 152 / 0.22);
-	--stardust: url('/textures/stardust-dark.svg');
-	--grain-opacity: 0.095;
+	/* Night. Deliberately kept within one family — deep blue through to a
+	   cold slate — rather than reaching for a second hue. The violet and
+	   green that were here read as coloured lighting on the page rather than
+	   as distance, which is the opposite of subtle. */
+	--sky-a: rgba(74 108 168 / 0.26);
+	--sky-b: rgba(68 92 142 / 0.2);
+	--sky-c: rgba(96 132 160 / 0.14);
+	--sky-star: #cdd9ee;
+	--grain-opacity: 0.075;
 }

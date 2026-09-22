@@ -24,11 +24,12 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 		<h2 class="label">Navigation</h2>
 		<ul class="key">
 			<li class="on-pointer"><span class="key-act">drag</span><span class="key-what">turn the field</span></li>
-			<li class="on-pointer"><span class="key-act">scroll</span><span class="key-what">zoom in / out</span></li>
+			<li class="on-pointer"><span class="key-act">scroll</span><span class="key-what">zoom where you point</span></li>
+			<li class="on-pointer"><span class="key-act">shift-drag</span><span class="key-what">slide the view</span></li>
 			<li class="on-pointer"><span class="key-act">hover</span><span class="key-what">preview a work</span></li>
 			<li class="on-pointer"><span class="key-act">click</span><span class="key-what">open a work</span></li>
 			<li class="on-touch"><span class="key-act">drag</span><span class="key-what">turn the field</span></li>
-			<li class="on-touch"><span class="key-act">pinch</span><span class="key-what">zoom in / out</span></li>
+			<li class="on-touch"><span class="key-act">pinch</span><span class="key-what">zoom and slide</span></li>
 			<li class="on-touch"><span class="key-act">tap ×2</span><span class="key-what">preview, then open</span></li>
 			<!-- Only while a category is showing: the way out of it. Being
 			     unable to undo a filter is a dead end people leave over, and
@@ -147,7 +148,10 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 	}
 	.key-act {
 		flex: none;
-		width: 3.1rem;
+		/* Wide enough for "shift-drag" without wrapping; the column only
+		   reads as a column if every entry in it starts at the same place. */
+		width: 4.4rem;
+		white-space: nowrap;
 		font-family: var(--font-mono);
 		font-size: 0.6rem;
 		letter-spacing: 0.06em;

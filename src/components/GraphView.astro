@@ -41,6 +41,15 @@ const { data } = Astro.props;
      from outside that stacking context. -->
 <div id="graph-hud" class="hud" aria-hidden="true" hidden></div>
 
+<!-- Appears only once most of the field has left the frame. A control that is
+     always there would be one more thing to read past; one that arrives
+     exactly when you are lost is an answer to a question you are already
+     asking. -->
+<button id="graph-recentre" class="recentre organic-2" type="button" hidden>
+	<span class="ripple organic-2" aria-hidden="true"></span>
+	<span class="recentre-label">recentre</span>
+</button>
+
 <script id="graph-data" type="application/json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} is:inline></script>
 
 <style>
@@ -95,6 +104,49 @@ const { data } = Astro.props;
 
 	.hud.below {
 		transform: translate(-50%, 0);
+	}
+
+	.recentre {
+		position: fixed;
+		right: var(--edge);
+		bottom: calc(var(--edge) + 2.9rem);
+		/* Under the detail panel (60), over the bottom bar (50). */
+		z-index: 55;
+		display: inline-flex;
+		align-items: center;
+		padding: 0.42rem 0.85rem;
+		border: 1px solid var(--rule);
+		background: var(--bg);
+		color: var(--fg);
+		font-family: var(--font-mono);
+		font-size: 0.64rem;
+		letter-spacing: 0.06em;
+		cursor: pointer;
+		opacity: 0;
+		transform: translateY(4px);
+		transition:
+			opacity 0.22s ease,
+			transform 0.22s ease,
+			border-color 0.18s ease;
+	}
+	.recentre.showing {
+		opacity: 0.92;
+		transform: translateY(0);
+	}
+	.recentre:hover,
+	.recentre:focus-visible {
+		border-color: var(--accent);
+	}
+	@media (max-width: 720px) {
+		.recentre {
+			/* Clear of the About button, which owns the bottom-left. */
+			bottom: calc(var(--edge) + 3.6rem);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.recentre {
+			transition: none;
+		}
 	}
 
 	/* Naming a work that isn't in the category being shown.
