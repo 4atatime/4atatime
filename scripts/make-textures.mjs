@@ -24,7 +24,7 @@ function mulberry32(seed) {
 }
 
 const TILE = 900;
-const STARS = 140;
+const STARS = 220;
 
 function dust(fill, seed, scale) {
 	const random = mulberry32(seed);
@@ -51,6 +51,6 @@ function dust(fill, seed, scale) {
 	);
 }
 
-writeFileSync('public/textures/stardust-dark.svg', dust('#dbe5f5', 0x5745, 0.9));
-writeFileSync('public/textures/stardust-light.svg', dust('#4a5a76', 0x5745, 0.5));
+writeFileSync('public/textures/stardust-dark.svg', dust('#dbe5f5', 0x5745, 1.35));
+writeFileSync('public/textures/stardust-light.svg', dust('#4a5a76', 0x5745, 0.85));
 console.log(`wrote 2 tiles, ${STARS} stars each`);

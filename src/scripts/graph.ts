@@ -178,39 +178,53 @@ const DRIFT_SPEED = 0.00035;
 // against the page — no contrast at all. The floors below are what stop that
 // while still letting the back of the cloud go quiet.
 //
-// Measured against the shipped palette, standby, back of the cloud to front:
-//   node  1.6:1 → 7.7:1 (light)   1.7:1 → 9.8:1 (dark)
-//   link  1.2:1 → 2.9:1 (light)   1.2:1 → 3.2:1 (dark)
+// Figures here are measured off the rendered canvas — every disc's painted
+// colour against the page — and not computed from the constants. Twice now
+// the arithmetic has been right about the formula and wrong about the graph:
+// it reports what a work at the very front or the very back would get, and
+// the answer is worth nothing if no work is ever at either. Read depthdiag
+// before changing anything here, or the numbers below.
 //
-// That is a front-to-back spread of about 5.0x in light and 5.7x in dark,
-// against 3.9x before and 2.7x when the depth cue was still a ranking. The
-// near end cannot go any further — it is already at full alpha in the theme's
-// own colour — so every increase past this point comes out of the far end,
-// which is why the floors below are the thing to watch rather than the
-// density. They are held where the back of the cloud still reads as present
-// against the page: 1.04:1, where an early version put standby links, is not
-// dim, it is absent.
+// Standby, farthest work on screen to nearest:
+//   dark   1.31:1 → 9.83:1, a spread of 7.5x
+//   light  1.30:1 → 7.74:1, a spread of 5.9x
+//
+// For comparison, the same measurement gave 2.87x when this was normalised
+// against the cloud's radius, while the constants implied 5.7x. That gap is
+// the whole story of two rounds that changed nothing anyone could see.
+//
+// The near end cannot go further — it is already full alpha in the theme's
+// own colour — so every increase past here comes out of the far end, which
+// makes the floors the thing to watch rather than the density. They are held
+// where the back of the cloud still reads as present: 1.04:1, where an early
+// version put standby links, is not dim, it is absent.
 //
 // The dimmed figures — what everything *else* drops to while one node is
 // hovered — are deliberately left near 1.1:1. That collapse is what makes the
 // highlight read, and raising the standby floors without keeping it would
 // have traded one legibility problem for another.
 /** E-foldings of extinction from the front of the cloud to the back. */
-const FOG_DENSITY = 2;
+const FOG_DENSITY = 2.4;
+/**
+ * The shallowest the fog is allowed to get, as a fraction of the cloud's
+ * radius. Only bites when the field is turned nearly edge-on, where there is
+ * no real depth to show and stretching what little there is would invent one.
+ */
+const FOG_MIN_SPAN = 0.9;
 /** How far a node's colour is washed toward the page at the far end. */
-const NODE_DEPTH_FADE = 0.5;
+const NODE_DEPTH_FADE = 0.62;
 /** Alpha at the back of the cloud, and how much more the front gets. */
-const NODE_ALPHA_FLOOR = 0.4;
-const NODE_ALPHA_RANGE = 0.6;
+const NODE_ALPHA_FLOOR = 0.3;
+const NODE_ALPHA_RANGE = 0.7;
 /** What a node drops to when something else is hovered. */
 const NODE_DIMMED = 0.34;
 /** The same pair for edges, which stay deliberately quieter than the discs:
  * roughly a third of a node's contrast at any given depth. Visible as
  * structure, never competing with the works they join. */
-const LINK_DEPTH_FADE = 0.48;
+const LINK_DEPTH_FADE = 0.6;
 const LINK_ALPHA = 1;
 /** Edges keep this much of their weight at the back, or the web comes apart. */
-const LINK_NEAR_FLOOR = 0.28;
+const LINK_NEAR_FLOOR = 0.14;
 /** Edge alpha while something is hovered: the quiet state, and the lit one. */
 const LINK_ALPHA_DIMMED = 0.18;
 const LINK_ALPHA_LIT = 0.7;
@@ -404,17 +418,49 @@ export function initGraph() {
 	settle(nodes, links, groups, random);
 
 	/**
-	 * How deep the cloud is, measured rather than assumed. The fog is defined
-	 * across the cloud's own front-to-back extent, so adding works in the CMS
-	 * grows the field without washing the whole thing out or flattening it.
-	 * Isotropic enough that one radius serves every view angle.
+	 * How big the cloud is, used only as a floor on how shallow the fog may
+	 * get — see depthCue.
 	 */
-	const cloudRadius = Math.max(
-		200,
-		Math.max(...nodes.map((n) => Math.hypot(n.x, n.y, n.z))),
-	);
-	const fogNear = CAMERA_DISTANCE - cloudRadius;
-	const fogSpan = 2 * cloudRadius;
+	const cloudRadius = Math.max(200, Math.max(...nodes.map((n) => Math.hypot(n.x, n.y, n.z))));
+
+	/** Front and back of the cloud this frame, in camera distance. */
+	let fogNear = CAMERA_DISTANCE - cloudRadius;
+	let fogSpan = 2 * cloudRadius;
+
+	/**
+	 * Where the fog starts and ends: the nearest and farthest works actually
+	 * on screen, not a figure derived from the cloud's radius.
+	 *
+	 * That derivation is what made the last two attempts at this invisible. A
+	 * node at the cloud's maximum radius is almost always off to one side —
+	 * far out in x or y — rather than directly in front of or behind the
+	 * camera, so the span from "radius" was roughly twice the depth the works
+	 * actually occupied. Nothing ever reached either end of the curve, every
+	 * work sat bunched around the middle of it, and the measured spread came
+	 * out at 2.9x while the arithmetic said 5.7x. The arithmetic was right
+	 * about the formula and wrong about the graph.
+	 *
+	 * Measuring the extremes directly is also the physically honest reading:
+	 * the question a depth cue answers is "how far through the cloud is this
+	 * one", and the cloud is as deep as it is from this angle, not as deep as
+	 * its widest axis. Two works at the same distance still come out the same
+	 * shade — this is a proportion, not the ordinal ranking that preceded it.
+	 *
+	 * The floor is what keeps an edge-on cloud honest. Turned so the works are
+	 * nearly all equidistant there is genuinely no depth to show, and without
+	 * it the last of the spread would be stretched back to full strength and
+	 * invent one.
+	 */
+	function measureFog() {
+		let lo = Infinity;
+		let hi = -Infinity;
+		for (const node of nodes) {
+			if (node.dist < lo) lo = node.dist;
+			if (node.dist > hi) hi = node.dist;
+		}
+		fogNear = lo;
+		fogSpan = Math.max(hi - lo, cloudRadius * FOG_MIN_SPAN);
+	}
 
 	/** How present something at this distance should look: 1 near, →0 far. */
 	function depthCue(dist: number) {
@@ -1127,6 +1173,7 @@ export function initGraph() {
 
 		// Read off each node's actual distance, so two works side by side are
 		// shaded alike and turning the field doesn't re-rank everything.
+		measureFog();
 		for (const node of nodes) node.near = depthCue(node.dist);
 
 		const anyHighlight = nodes.some((node) => node.glow > 0.02);
