@@ -104,6 +104,14 @@ git checkout dev
 git pull
 ```
 
+If `git pull` answers *"There is no tracking information for the current
+branch"*, it doesn't know which remote branch this one follows. Tell it once,
+and it will remember:
+
+```bash
+git branch --set-upstream-to=origin/dev dev
+```
+
 Run `git merge main` too if you like — it's a harmless no-op when the Action
 has already done its job, and it covers the case where the Action was off or
 had nothing it could do.
