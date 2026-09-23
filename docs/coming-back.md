@@ -108,6 +108,13 @@ Run `git merge main` too if you like — it's a harmless no-op when the Action
 has already done its job, and it covers the case where the Action was off or
 had nothing it could do.
 
+**To confirm the Action is doing its job**, the next time you publish a work
+in the CMS: go to the repository on GitHub, open the **Actions** tab, and you
+should see "Keep dev in step with main" run and go green within a minute. Or
+check the branches page — `dev` and `main` should show the same latest commit.
+If it ever stops working, nothing breaks; you're back to running
+`git merge main` yourself, which is why that line is still here.
+
 **Nothing rots while `dev` is behind.** This was overstated in an earlier
 version of this guide, so, precisely: merging a stale `dev` into `main` does
 **not** revert your content. Git merges the two sides; it doesn't overwrite
