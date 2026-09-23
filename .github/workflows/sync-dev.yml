@@ -1,0 +1,65 @@
+# Keeps `dev` in step with `main` by itself.
+#
+# Decap commits straight to `main` every time a work is published, so the code
+# branch falls behind by however many edits have happened since anyone last
+# touched the code. Nothing breaks while it is behind — merging a stale `dev`
+# into `main` does not revert content, it merges — but you end up writing and
+# testing code against a version of the site that is not the one online, which
+# is its own quiet way of wasting an afternoon.
+#
+# So: whenever `main` moves, fast-forward `dev` to match.
+#
+# Fast-forward only, deliberately. If `dev` has commits of its own — someone is
+# mid-way through a change — there is nothing to fast-forward and this stops
+# and says so rather than merging on their behalf. It will never rewrite, never
+# force, and never touch `main`.
+#
+# To switch it off: delete this file.
+name: Keep dev in step with main
+
+on:
+  push:
+    branches: [main]
+  # So it can also be run by hand from the Actions tab.
+  workflow_dispatch:
+
+# Only one at a time: two CMS publishes in quick succession would otherwise
+# race each other to push the same branch.
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: a fast-forward needs to know how the branches relate.
+          fetch-depth: 0
+
+      - name: Fast-forward dev to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if ! git show-ref --verify --quiet refs/remotes/origin/dev; then
+            echo "There is no dev branch. Nothing to do."
+            exit 0
+          fi
+
+          git checkout -B dev origin/dev
+
+          if git merge-base --is-ancestor origin/dev origin/main; then
+            git merge --ff-only origin/main
+            git push origin dev
+            echo "dev is now level with main."
+          else
+            echo "dev has commits of its own, so it cannot be fast-forwarded."
+            echo "That is expected while a change is in progress; it will"
+            echo "catch up when that work merges into main."
+          fi
