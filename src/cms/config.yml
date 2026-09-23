@@ -123,12 +123,6 @@ collections:
         name: heroImage
         widget: image
         required: false
-        # Must be an uploaded file, not a pasted web address. Astro builds
-        # these images at deploy time and can only do that for files in the
-        # repo; a remote URL fails the build. See the note on `gallery` below.
-        pattern:
-          - '^/src/assets/'
-          - 'Upload an image file. A pasted web address (an Instagram or Google link) will not work here.'
 
       - label: Elsewhere
         name: links
@@ -147,20 +141,14 @@ collections:
         label_singular: plate
         summary: '{{fields.title}}'
         fields:
-          # The Image field takes an *uploaded file*, never a web address.
-          # Astro resizes every plate at build time, which it can only do for
-          # files in the repo. A pasted Instagram link used to sail through the
-          # CMS and then break the deploy with "Missing width and height
-          # attributes" — the pattern below stops it at Publish instead.
-          # To show a picture that lives on Instagram: upload the picture into
-          # Image, and put the Instagram address in Link.
+          # NOTE: do not add a `pattern:` here. It was tried on 2026-09-23 to
+          # catch a pasted Instagram URL and it rejected every *existing*
+          # image too, locking the whole entry — Decap validates the resolved
+          # asset URL, not the stored /src/assets/… path. See docs/coming-back.md.
           - label: Image
             name: src
             widget: image
             hint: Upload the picture itself. To point at an Instagram post, use the Link field below.
-            pattern:
-              - '^/src/assets/'
-              - 'Upload an image file. A pasted web address (an Instagram or Google link) will not work here — put that in the Link field instead.'
           - { label: Title, name: title, widget: string, required: false }
           - { label: Caption, name: caption, widget: text, required: false }
           - label: Link
