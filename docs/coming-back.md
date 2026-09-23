@@ -297,6 +297,23 @@ the other.
 and the validation. Adding a tag is a code change, not a CMS change — see
 `docs/editing-content.md`.
 
+**Never put a `pattern:` on an `image` or `file` widget.** Tried on 2026-09-23
+to stop a pasted Instagram URL reaching the `src` field, and it locked the CMS
+completely: every entry showed a validation error, nothing could be saved or
+published, and the picker refused replacements. The reason is that Decap does
+not test the stored value. `getValidateValue()` on the file/image control runs
+the path through a basename helper first, so `pattern` is matched against
+`hero.png`, never against `/src/assets/work/…/hero.png`. A path-shaped pattern
+therefore matches nothing — it was checked against all 168 image values in
+`src/content/`, and rejected 168 of them.
+
+If this is attempted again, it must be verified in a real browser against an
+*existing* entry before shipping. Checking the regex against the stored path in
+the markdown, or against the parsed YAML, passes while the CMS is broken —
+that's exactly the mistake that shipped. Note that validating the extracted
+Decap helpers offline is enough to *diagnose* this, but not to clear a
+replacement: a harness that can't reproduce the known failure proves nothing.
+
 **Don't push directly to `main`.** It's what's live. Work on `dev` and merge.
 
 ---
