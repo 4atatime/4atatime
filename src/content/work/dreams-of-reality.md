@@ -13,9 +13,7 @@ tags:
   - Experimental
 role: Illustration, hand-poked tattoo
 location: Berlin
-tools:
-  - Collage
-  - Hand-poke
+tools: []
 heroImage: /src/assets/work/dreams-of-reality/hero.png
 links:
   - label: Instagram
@@ -52,15 +50,19 @@ gallery:
   - src: /src/assets/work/dreams-of-reality/radicalight-2.png
     title: "Radicalight #"
     href: https://www.instagram.com/p/Czo_uIjLaAD/?img_index=1
-  - src: /src/assets/work/dreams-of-reality/multiplied-leaking-ink.png
-    title: Multiplied leaking ink
-    href: https://www.instagram.com/p/CmKmURfLfVP/
-  - src: /src/assets/work/dreams-of-reality/botanical-boots.png
-    title: Botanical boots
-    href: https://www.instagram.com/p/CmKmX4ArXjL/
   - src: /src/assets/work/dreams-of-reality/handing-joy-in-scents.png
     title: Handing joy in scents
     href: https://www.instagram.com/p/CmKmhgZr_pU/
+  - title: Handing joy in scents
+    src: https://www.instagram.com/p/Dc3WGDIgpsy/
+  - src: /src/assets/work/dreams-of-reality/multiplied-leaking-ink.png
+    title: Multiplied leaking ink
+    href: https://www.instagram.com/p/CmKmURfLfVP/
+  - src: https://www.instagram.com/p/Db6p2fNArYT/
+    title: Caffeinated glance
+  - src: /src/assets/work/dreams-of-reality/botanical-boots.png
+    title: Botanical boots
+    href: https://www.instagram.com/p/CmKmX4ArXjL/
   - src: /src/assets/work/dreams-of-reality/gymnastic-mapping.png
     title: Gymnastic mapping
     href: https://www.instagram.com/p/CnHHH25LoQ-/
