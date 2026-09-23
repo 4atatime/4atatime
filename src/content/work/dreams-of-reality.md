@@ -53,7 +53,7 @@ gallery:
   - src: /src/assets/work/dreams-of-reality/handing-joy-in-scents.png
     title: Handing joy in scents
     href: https://www.instagram.com/p/CmKmhgZr_pU/
-  - title: Handing joy in scents
+  - title: "Handing joy in scents #"
     src: https://www.instagram.com/p/Dc3WGDIgpsy/
   - src: /src/assets/work/dreams-of-reality/multiplied-leaking-ink.png
     title: Multiplied leaking ink
