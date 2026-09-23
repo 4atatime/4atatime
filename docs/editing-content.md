@@ -104,6 +104,21 @@ when it builds and serves a size that suits each screen, so a big file costs
 your visitors nothing. Pictures for a work are filed in that work's own folder
 automatically.
 
+**Image and Link are not interchangeable.** A web address pasted into **Image**
+cannot work, however good the link is. The site rebuilds every picture at deploy
+time — that is what makes them fast — and it can only do that to a file it holds
+itself. It cannot reach out to Instagram during a build, and Instagram would
+refuse it anyway.
+
+So, to show a picture that also lives on Instagram:
+
+- **Image** — save the picture to your phone or computer and upload it here.
+- **Link** — paste the Instagram address here.
+
+The CMS now refuses a pasted address in **Image** and says so when you Publish.
+Before that it accepted it quietly and the deploy failed afterwards, which is
+harder to spot.
+
 ### Edit the About & Contact page
 
 **Pages → About & Contact.** The bio, the email address, the link list and the
@@ -173,6 +188,7 @@ the repository's history on GitHub.
 | Logged in, but "not authorised" | The repo in the config doesn't match, or that account can't write to it | Check `repo:` in `src/cms/config.yml` reads `4atatime/4atatime`. |
 | Published, but the site doesn't change | The build failed, or you published to the wrong branch | Check Vercel's deployment log, then Part 3. |
 | Build fails after a save | A required field is empty, a bad date, or an unknown tag | The build message names the field and the work. Open it and check. |
+| Build fails saying `MissingImageDimension` | A web address was pasted into a plate's **Image** field instead of a picture being uploaded | Open the work, find the plate, upload the actual picture into **Image**, and move the address to **Link**. See "Add pictures to a work". |
 
 ---
 
