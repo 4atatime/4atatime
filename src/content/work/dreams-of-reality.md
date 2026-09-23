@@ -53,13 +53,9 @@ gallery:
   - src: /src/assets/work/dreams-of-reality/handing-joy-in-scents.png
     title: Handing joy in scents
     href: https://www.instagram.com/p/CmKmhgZr_pU/
-  - title: "Handing joy in scents #"
-    src: https://www.instagram.com/p/Dc3WGDIgpsy/
   - src: /src/assets/work/dreams-of-reality/multiplied-leaking-ink.png
     title: Multiplied leaking ink
     href: https://www.instagram.com/p/CmKmURfLfVP/
-  - src: https://www.instagram.com/p/Db6p2fNArYT/
-    title: Caffeinated glance
   - src: /src/assets/work/dreams-of-reality/botanical-boots.png
     title: Botanical boots
     href: https://www.instagram.com/p/CmKmX4ArXjL/
