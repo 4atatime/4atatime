@@ -13,9 +13,15 @@ the traps that have caught previous sessions.
 - **`main` is live.** Vercel builds production from it, and **Decap CMS commits
   straight to it** every time Lexie presses Publish.
 - `dev` is where code changes are made.
-- Because the CMS writes to `main`, **`dev` is usually behind**. Always
-  `git checkout dev && git merge main` before starting work, or you will
-  resurrect old content.
+- Because the CMS writes to `main`, `dev` drifts behind. A GitHub Action
+  (`.github/workflows/sync-dev.yml`) fast-forwards `dev` after every push to
+  `main`, so it is usually already level. Still `git pull` before starting.
+
+A stale `dev` does **not** put content at risk: merging it into `main` merges,
+it does not overwrite, and published works survive. The costs are working
+against content that isn't what's online, and a possible conflict if the code
+work edits the same file the CMS did. Don't let a warning about this grow into
+a claim that content gets reverted — it doesn't, and that was checked.
 
 ### The standing rule for every update
 

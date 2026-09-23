@@ -87,23 +87,39 @@ That is a complete restoration. Nothing is stored only on your machine.
 because `npm install` doesn't fetch browsers. Skip it if you're not testing —
 `npm test` will remind you if you need it.)
 
-### 3.2 Catch up with the CMS first — this matters
+### 3.2 Catch up with the CMS
 
-Every time you press Publish in the CMS, that's a commit on `main`. So the
-code branch `dev` falls behind by however many edits you've made since.
+Every time you press Publish in the CMS, that's a commit on `main`. The code
+branch `dev` doesn't move, so it falls behind by however many edits you've
+published since anyone last touched the code.
 
-**Always run this before starting work**, or you'll republish old content over
-your new content:
+**This is handled automatically.** A GitHub Action
+(`.github/workflows/sync-dev.yml`) brings `dev` up to `main` within a minute
+of every publish. You should never have to think about it.
+
+So in practice, all you need is:
 
 ```bash
 git checkout dev
 git pull
-git merge main
 ```
 
-If it says `Already up to date.` or `Fast-forward`, you're fine. If it
-mentions a conflict, don't try to fix it by hand — that's a thing to hand to
-Claude (next step).
+Run `git merge main` too if you like — it's a harmless no-op when the Action
+has already done its job, and it covers the case where the Action was off or
+had nothing it could do.
+
+**Nothing rots while `dev` is behind.** This was overstated in an earlier
+version of this guide, so, precisely: merging a stale `dev` into `main` does
+**not** revert your content. Git merges the two sides; it doesn't overwrite
+one with the other. Published works stay published. The only real costs of a
+stale `dev` are that you'd be writing and testing code against a version of
+the site that isn't the one online, and that you could hit a merge conflict —
+but only if the code work edited *the same file* the CMS did, which means a
+content file, which code work almost never touches.
+
+If you do see the word `CONFLICT`, don't fix it by hand — hand it to Claude
+(next step). It fails loudly rather than silently, so nothing is lost while
+you decide.
 
 ### 3.3 Start Claude Code
 
@@ -276,8 +292,8 @@ Coming back to change something:
 
 ```bash
 cd ~/4atatime
-git checkout dev && git pull && git merge main   # catch up with the CMS
-claude                                            # then describe the change
+git checkout dev && git pull    # the Action has usually synced it already
+claude                          # then describe the change
 ```
 
 Coming back to check something:
