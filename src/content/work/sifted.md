@@ -24,10 +24,9 @@ links:
   - label: Sifted
     href: https://sifted.eu/
 gallery:
-  - src: /src/assets/work/sifted/at-a-glance.png
-    title: ""
-    caption: ""
-    href: https://sifted.eu/
+  - src: /src/assets/work/sifted/img_0881.png
+  - src: /src/assets/work/sifted/img_0882.png
+  - src: /src/assets/work/sifted/img_0883.png
 ---
 ## At a glance
 
