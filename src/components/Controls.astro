@@ -8,9 +8,13 @@
 // Theme state is bootstrapped synchronously in BaseHead.astro to avoid a flash
 // of the wrong theme; this only wires up click-to-toggle and persistence.
 //
-// Sound assets: an ambient loop at public/audio/ambient.mp3 plus optional
+// Sound assets: an ambient loop at public/audio/ambient.m4a plus optional
 // one-shots at public/audio/click-1.mp3 … click-5.mp3. Missing files fail
 // silently (every play() is caught), so the toggle works either way.
+//
+// The loop is AAC at 128 kbps (4.5 MB). It was a 320 kbps MP3 (11 MB) until
+// 2026-09-24, re-encoded to keep deployments small; same length to the
+// sample, and the 320 kbps original is in git history and the backups.
 const CLICK_SOUND_COUNT = 5;
 ---
 
@@ -53,7 +57,7 @@ const CLICK_SOUND_COUNT = 5;
 	</button>
 </div>
 
-<audio id="ambient-audio" src="/audio/ambient.mp3" loop preload="none"></audio>
+<audio id="ambient-audio" src="/audio/ambient.m4a" loop preload="none"></audio>
 
 <style>
 	.controls {
