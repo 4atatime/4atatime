@@ -35,10 +35,6 @@ gallery:
     title: man in yellow jacket
   - src: /src/assets/work/draws-crawls/untitled_artwork-3.jpg
     title: minimorphosis, or fellshish
-  - src: /src/assets/work/draws-crawls/untitled_artwork-2.jpg
-    title: the squidilly squidman
-  - src: /src/assets/work/draws-crawls/img_7468.png
-    title: penguin mecha
 ---
 Cringe but hey everyone had an emo era! 
 
