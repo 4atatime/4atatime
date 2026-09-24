@@ -1,21 +1,33 @@
 ---
-title: "Sifted"
-section: "UI/UX"
-tags: ["Web", "Editorial", "Design System", "Client Work", "Research", "Figma", "Typography"]
-date: "12/2023"
+title: Sifted
+section: UI/UX
+intro: At Sifted, I worked as both a graphic designer supporting reports and
+  articles on European startups, and as a UI designer in product team working on
+  the website.
+date: 12/2023
 sortDate: 2023-12-01
-role: "Junior Product Designer"
-location: "London, UK (Remote)"
-tools: ["Figma","Figjam","User Research","Product","Cross-function","Editorial"]
-intro: "At Sifted, I applied visual communication and UI design skills to support reports on European innovation and startups."
-heroImage: "/src/assets/work/sifted/hero.png"
+tags:
+  - Web
+  - Editorial
+  - Design System
+  - Client Work
+  - Research
+  - Figma
+  - AI
+role: Junior Product Designer
+location: London (Remote)
+tools:
+  - Figma & Figjam
+  - Adobe suite
+heroImage: /src/assets/work/sifted/hero.png
 links:
-  - { label: "Sifted", href: "https://sifted.eu/" }
+  - label: Sifted
+    href: https://sifted.eu/
 gallery:
-  - src: "/src/assets/work/sifted/at-a-glance.png"
-    title: "At a glance:"
-    caption: "Sifted is a European tech & startup media platform — sharp journalism for founders, operators, and investors who want signal, not noise."
-    href: "https://sifted.eu/"
+  - src: /src/assets/work/sifted/at-a-glance.png
+    title: ""
+    caption: ""
+    href: https://sifted.eu/
 ---
 ## At a glance
 
