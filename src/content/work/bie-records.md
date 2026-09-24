@@ -15,7 +15,7 @@ role: Design
 location: Beijing, China
 tools: []
 status: ""
-heroImage: /src/assets/work/bie-records/hero.jpg
+heroImage: ""
 links:
   - label: Bié Records
     href: https://bierecords.bandcamp.com/
