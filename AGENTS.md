@@ -76,6 +76,12 @@ Manage the background server with `astro dev stop`, `astro dev status`, and `ast
   no start state to transition from.
 - The graph's colours come from CSS custom properties read at runtime, so the
   canvas re-reads them when the theme switches.
+- `vercel.json` turns off Vercel builds for `dev`. After every CMS publish
+  the sync Action moves `dev` onto the same commit as `main`, so each `dev`
+  preview was a byte-identical duplicate of production — and Hobby protects
+  the latest deployment of every active branch, so one always sat in
+  Deployment Storage (10 GB free) for nothing. Check changes locally with
+  `npm run build` and `npm test` instead; delete the file to get previews back.
 - Depth figures in `src/scripts/graph.ts` are measured off rendered pixels,
   not computed from the constants. See the comment block there before
   changing them — the arithmetic has been misleading twice.
