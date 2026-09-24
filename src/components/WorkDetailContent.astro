@@ -40,6 +40,10 @@ const category = categoryOf(section);
 // was about a third of every deployment's size.
 const HERO_MAX = 1440;
 const PLATE_MAX = 1260;
+// WebP quality for every work image. Sharp's default is 80; 75 is about 20%
+// smaller across this collection and was chosen by Lexie on 2026-09-24 after
+// comparing crops side by side.
+const QUALITY = 75;
 
 // An image's pixel width, read without publishing the original. Reading any
 // property of an imported image straight off it makes Astro copy the untouched
@@ -110,6 +114,7 @@ const readings: { key: string; value: string }[] = [
 					alt={`${title} — cover`}
 					width={Math.min(widthOf(heroImage), HERO_MAX)}
 					widths={[480, 960, HERO_MAX]}
+					quality={QUALITY}
 					sizes="(min-width: 721px) 45vw, 92vw"
 					loading="eager"
 				/>
@@ -137,6 +142,7 @@ const readings: { key: string; value: string }[] = [
 									alt={plate.title ?? `${title} — plate ${i + 1}`}
 									width={Math.min(widthOf(plate.src), PLATE_MAX)}
 									widths={[420, 840, PLATE_MAX]}
+									quality={QUALITY}
 									sizes="(min-width: 721px) 45vw, 92vw"
 									loading="lazy"
 								/>
