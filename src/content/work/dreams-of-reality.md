@@ -53,6 +53,10 @@ gallery:
   - src: /src/assets/work/dreams-of-reality/handing-joy-in-scents.png
     title: Handing joy in scents
     href: https://www.instagram.com/p/CmKmhgZr_pU/
+  - title: "Handing joy in scents #"
+    src: /src/assets/work/dreams-of-reality/4669.png
+  - src: /src/assets/work/dreams-of-reality/caffeinated-glance.png
+    title: Caffeinated glance
   - src: /src/assets/work/dreams-of-reality/multiplied-leaking-ink.png
     title: Multiplied leaking ink
     href: https://www.instagram.com/p/CmKmURfLfVP/
@@ -75,4 +79,4 @@ gallery:
     title: Grape descent
     href: https://www.instagram.com/p/CnnI6oirmM5/
 ---
-Mixed media dreamscapes — collage and drawing, ongoing since 2023.
+Mixed media dreamscapes: collages, drawings, turned into tattoos, ongoing since 2023.
