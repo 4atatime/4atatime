@@ -9,10 +9,13 @@ tags:
   - Geometric
   - Illustration
   - Experimental
+  - Hand-drawn
 role: ""
 location: Berlin, Amsterdam
 tools:
+  - Sketch
   - Hand-poke
+link: ""
 heroImage: /src/assets/work/shapes-traces/hero.png
 links:
   - label: Instagram
@@ -102,4 +105,17 @@ gallery:
   - src: /src/assets/work/shapes-traces/untitled.png
     title: untitled
     href: https://www.instagram.com/p/CxHEPKVIUNZ/?img_index=1
+  - src: /src/assets/work/shapes-traces/flash_2.png
+    title: landscrape 2
+  - title: landscrape 1
+    src: /src/assets/work/shapes-traces/flash_1.png
+  - src: /src/assets/work/shapes-traces/screenshot-2026-09-24-at-14.26.14.png
+    title: Soy Ttories 1
+  - src: /src/assets/work/shapes-traces/screenshot-2026-09-24-at-14.26.02.png
+    title: ""
+  - src: /src/assets/work/shapes-traces/4670.png
+    title: "Soy Ttories #"
+  - src: /src/assets/work/shapes-traces/4671.png
+  - src: /src/assets/work/shapes-traces/60.png
+  - src: /src/assets/work/shapes-traces/58.png
 ---
