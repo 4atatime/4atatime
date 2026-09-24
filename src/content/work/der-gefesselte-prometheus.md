@@ -14,7 +14,5 @@ role: Book cover design
 location: ""
 tools: []
 heroImage: /src/assets/work/der-gefesselte-prometheus/hero.png
-gallery:
-  - src: /src/assets/work/der-gefesselte-prometheus/dgp-1.png
-  - src: /src/assets/work/der-gefesselte-prometheus/mockup_2.png
+gallery: []
 ---
