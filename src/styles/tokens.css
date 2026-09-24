@@ -58,7 +58,6 @@
 	--sky-b: rgba(196 172 152 / 0.2);
 	--sky-c: rgba(140 184 172 / 0.15);
 	--sky-star: #5a6a86;
-	--grain-opacity: 0.06;
 	/* Hairlines in the notation styling. A touch darker than --border, which
 	   is tuned for filled edges: a 1px rule at --border all but disappears. */
 	--rule: #c3ced6;
@@ -96,5 +95,4 @@
 	--sky-b: rgba(68 92 142 / 0.2);
 	--sky-c: rgba(96 132 160 / 0.14);
 	--sky-star: #cdd9ee;
-	--grain-opacity: 0.075;
 }

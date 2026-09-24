@@ -1,6 +1,5 @@
 // @ts-check
 
-import mdx from '@astrojs/mdx';
 import sitemap from '@astrojs/sitemap';
 import vercel from '@astrojs/vercel';
 import { defineConfig, envField, fontProviders } from 'astro/config';
@@ -45,7 +44,6 @@ export default defineConfig({
 		},
 	},
 	integrations: [
-		mdx(),
 		// The CMS and its login routes are not part of the site. /admin already
 		// says noindex; listing it in the sitemap as well would be telling
 		// crawlers both things at once.

@@ -1126,10 +1126,35 @@ export function initGraph() {
 	const byId = new Map(nodes.map((node, i) => [node.id, i]));
 
 	const theme = readTheme(document.documentElement);
-	new MutationObserver(() => Object.assign(theme, readTheme(document.documentElement))).observe(
-		document.documentElement,
-		{ attributes: true, attributeFilter: ['data-theme'] },
-	);
+
+	/**
+	 * How wide a title is at a given size, measured once per title rather than
+	 * every frame. Measuring each title at a fresh fractional size sixty times
+	 * a second was the largest single cost in the render loop — about half its
+	 * scripting time. A title's width scales with its size to within 0.14px
+	 * across every title and size the graph uses (measured, against the real
+	 * fonts), which is far inside the padding the collision test adds anyway.
+	 *
+	 * Forgotten whenever a font finishes loading: the first measurement can be
+	 * taken in the fallback face, and the Chinese subsets only arrive when a
+	 * title needs them.
+	 */
+	const TITLE_REFERENCE_SIZE = 100;
+	const titleWidths = new Map<string, number>();
+	document.fonts?.addEventListener('loadingdone', () => titleWidths.clear());
+	function titleWidth(title: string, size: number) {
+		let width = titleWidths.get(title);
+		if (width === undefined) {
+			ctx.font = `${TITLE_REFERENCE_SIZE}px ${theme.family}`;
+			width = ctx.measureText(title).width;
+			titleWidths.set(title, width);
+		}
+		return (width * size) / TITLE_REFERENCE_SIZE;
+	}
+	new MutationObserver(() => {
+		Object.assign(theme, readTheme(document.documentElement));
+		titleWidths.clear();
+	}).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
 	/** A work is reachable only while its category is the one being shown. */
 	function inFilter(node: SimNode) {
@@ -1372,6 +1397,11 @@ export function initGraph() {
 		const shiftX = -panX * zoom * STAR_PARALLAX;
 		const shiftY = -panY * zoom * STAR_PARALLAX;
 		const still = reducedMotion.matches;
+		// One colour for the whole sky, with each star's brightness carried by
+		// globalAlpha: the same pixels as a fresh rgba() string per star, without
+		// building and parsing 460 strings a frame. Brightness can come out above
+		// 1, which rgba() clamps and globalAlpha would ignore — so it's clamped.
+		ctx.fillStyle = rgba(theme.star, 1);
 
 		for (const star of stars) {
 			const x1 = star.dx * cosYaw + star.dz * sinYaw;
@@ -1398,9 +1428,10 @@ export function initGraph() {
 			const edge = Math.min(1, (z2 - STAR_FRONT) / 0.25);
 			ctx.beginPath();
 			ctx.arc(px, py, star.size, 0, Math.PI * 2);
-			ctx.fillStyle = rgba(theme.star, star.base * pulse * edge);
+			ctx.globalAlpha = Math.min(1, star.base * pulse * edge);
 			ctx.fill();
 		}
+		ctx.globalAlpha = 1;
 	}
 
 	function draw() {
@@ -1509,9 +1540,8 @@ export function initGraph() {
 			if (node.sr < LABEL_MIN_RADIUS && !lit) continue;
 
 			const size = labelSize(node);
-			ctx.font = `${size}px ${theme.family}`;
 			const top = node.ly + node.sr + 7;
-			const half = ctx.measureText(node.title).width / 2;
+			const half = titleWidth(node.title, size) / 2;
 			const box = {
 				x0: node.lx - half - LABEL_PADDING,
 				y0: top - LABEL_PADDING,
