@@ -13,7 +13,7 @@ tags:
 role: Guitar, synth, vocal (sometimes)
 location: Berlin
 tools: []
-link: https://www.subvert.fm/4atatime
+link: ""
 heroImage: /src/assets/work/4atatime-band/hero.png
 links:
   - label: Soundcloud
