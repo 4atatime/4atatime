@@ -255,10 +255,14 @@ check('the page has a sky rather than one flat fill',
     const before = getComputedStyle(document.body, '::before');
     return before.backgroundImage !== 'none' && before.backgroundImage.includes('gradient');
   }));
-check('and grain over the top of it',
+// The film grain that used to sit over everything was removed on 2026-09-24,
+// Lexie's decision: blended over a canvas that redraws every frame, it cost
+// about a third of the page's measured GPU work. This keeps it from quietly
+// coming back — no full-screen layer blended over the graph.
+check('and no full-screen blended layer over the graph',
   await page.evaluate(() => {
     const after = getComputedStyle(document.body, '::after');
-    return after.backgroundImage !== 'none' && parseFloat(after.opacity) > 0.02;
+    return after.content === 'none' || after.mixBlendMode === 'normal';
   }));
 
 check('no console errors', errors.length === 0, errors[0] ?? '');
