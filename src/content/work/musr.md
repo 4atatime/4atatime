@@ -1,8 +1,8 @@
 ---
 title: Musr
 section: UI/UX
-intro: Establishing a cohesive visual language and reusable component library to
-  ensure a consistent user experience.
+intro: Creating a cohesive visual identity and reusable component library for
+  musr, a dating app that connects people by their music tastes.
 date: "2024"
 sortDate: 2024-01-01
 tags:
@@ -15,26 +15,16 @@ location: Haarlem, NL
 tools:
   - Figma
   - Design System
-  - Documentation
-  - Analytical
-  - Startup
-  - Collaborative
-status: Design system in use.
+status: ""
 heroImage: /src/assets/work/musr/hero.png
 links:
   - label: Musr
     href: https://musr.app/
-gallery:
-  - src: /src/assets/work/musr/at-a-glance.png
-    title: "At a glance:"
-    caption: For Musr, a social app connecting people through music tastes, I
-      developed a comprehensive design system that transformed initial concepts
-      into a cohesive product.
-    href: https://musr.app/
+gallery: []
 ---
 ## At a glance
 
-For Musr, a social app connecting people through music tastes, I developed a comprehensive design system that transformed initial concepts into a cohesive product.
+For Musr, a social app connecting people through music tastes, I developed a comprehensive design system that transformed initial concepts into a structured system, with a clear visual identity.
 
 ## Focus: a design system from scratch
 
@@ -44,9 +34,9 @@ For Musr, a social app connecting people through music tastes, I developed a com
 
 **Solution:**
 
-- A modular component library with usage guidelines
-- Responsive layout principles for cross-device consistency
-- Typography and colour hierarchy
-- Interaction patterns and behaviour logics
+* A modular component library with usage guidelines
+* Responsive layout principles for cross-device consistency
+* Typography and colour hierarchy
+* Interaction patterns and behaviour logics
 
 The new system enabled faster implementation by developers, reduced decision fatigue for designers, and created a more coherent user experience — while providing Musr with the structured foundation needed to iterate quickly and maintain brand cohesion.
