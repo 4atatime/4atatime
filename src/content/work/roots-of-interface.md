@@ -11,28 +11,23 @@ tags:
   - Print
   - Archival
   - Experimental
-  - Philosophy
   - Personal Project
   - Typography
-role: Visual research, digital collage
+role: ""
 location: Berlin
 tools:
   - Digital collage
+  - Visual research
 status: ""
 heroImage: /src/assets/work/roots-of-interface/hero.png
 links:
-  - label: Read the PDF
+  - label: Read the report
     href: https://www.are.na/block/47353153
 gallery:
-  - src: /src/assets/work/roots-of-interface/plate-01.png
-  - src: /src/assets/work/roots-of-interface/plate-02.png
   - src: /src/assets/work/roots-of-interface/plate-03.png
   - src: /src/assets/work/roots-of-interface/plate-04.png
-  - src: /src/assets/work/roots-of-interface/plate-05.png
   - src: /src/assets/work/roots-of-interface/plate-06.png
-  - src: /src/assets/work/roots-of-interface/plate-07.png
   - src: /src/assets/work/roots-of-interface/plate-08.png
-  - src: /src/assets/work/roots-of-interface/plate-09.png
 ---
 A Field Guide to Ancestral Interfaces
 
