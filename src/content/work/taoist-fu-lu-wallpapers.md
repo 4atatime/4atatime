@@ -22,15 +22,13 @@ status: ""
 heroImage: ""
 links: []
 gallery:
-  - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-01.png
-    title: 「財神」
   - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-02.png
+    title: 「財神」
   - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-03.png
   - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-04.png
     title: ""
     caption: ""
   - src: /src/assets/work/taoist-fú-lù-redesign/財神2.1.png
-  - src: /src/assets/work/taoist-fú-lù-redesign/財神2.3.png
   - src: /src/assets/work/taoist-fú-lù-redesign/財神2.3.png
   - src: /src/assets/work/taoist-fú-lù-redesign/財神2.4.png
   - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-05.png
