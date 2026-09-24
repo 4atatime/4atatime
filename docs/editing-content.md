@@ -104,6 +104,12 @@ when it builds and serves a size that suits each screen, so a big file costs
 your visitors nothing. Pictures for a work are filed in that work's own folder
 automatically.
 
+It doesn't cost Vercel storage either. Only the resized copies are published,
+never the file you uploaded, so a 9 MB original takes about the same room on
+Vercel as a 1 MB one. What does add up is the *number* of pictures on the site.
+A picture you've taken off a work stops being published straight away, even
+though its file stays in the folder.
+
 **Image and Link are not interchangeable.** A web address pasted into **Image**
 cannot work, however good the link is. The site rebuilds every picture at deploy
 time — that is what makes them fast — and it can only do that to a file it holds

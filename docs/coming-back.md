@@ -25,7 +25,12 @@ Two branches:
 - **`dev`** is where code changes are made before they go live.
 
 Every release is tagged `release/<date>`, so any previous version of the site
-can be brought back exactly. The most recent is `release/2026-09-23d`.
+can be brought back exactly. `git tag -l 'release/*'` lists them; the newest
+is at the bottom. Examples below use `release/2026-09-23d`; swap in whichever
+one you want.
+
+There is also a full offline backup, taken before the 2026-09-24 slimming, in
+`~/4atatime-backups/`. `HOW-TO-RESTORE.txt` in there explains it.
 
 ---
 
@@ -315,6 +320,25 @@ Decap helpers offline is enough to *diagnose* this, but not to clear a
 replacement: a harness that can't reproduce the known failure proves nothing.
 
 **Don't push directly to `main`.** It's what's live. Work on `dev` and merge.
+
+**Vercel's free plan has 10 GB of Deployment Storage, and every deployment
+counts.** A deployment is a full copy of the built site, about 46 MB since
+2026-09-24 (it was 91 MB). Each CMS publish makes one. Vercel keeps the recent
+ones and deletes older ones when the limit is reached, so the site stays up.
+The warning in September came from a month of heavy building, when every push
+to `main` *and* every push to `dev` made a deployment. Three things keep it low
+now, and each is worth keeping:
+
+- `vercel.json` stops `dev` deploying. Those builds were exact copies of the
+  live site.
+- Work images publish at their three `srcset` sizes only, not a fourth
+  full-resolution copy. The comment in `WorkDetailContent.astro` explains why
+  the width is read through `clone`. Reading `.width` directly makes Astro
+  publish the original files too, and doubles the build.
+- The music is 128 kbps AAC, not 320 kbps MP3.
+
+Check the size of a build with `npm run build && du -sh .vercel/output/static`.
+If it jumps, something started publishing originals again.
 
 ---
 
