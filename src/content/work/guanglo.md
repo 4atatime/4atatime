@@ -8,7 +8,6 @@ sortDate: 2025-11-01
 tags:
   - Mobile App
   - Design System
-  - Web
   - Client Work
   - Figma
   - Start-up
@@ -16,11 +15,9 @@ role: Product Designer
 location: China (Remote)
 tools:
   - Figma
-status: Backstage management design shipped
+status: ""
 heroImage: /src/assets/work/guanglo/hero.png
 ---
-Standardised a scalable design system from scratch, then used it to turn
-complex internal workflows into a streamlined backstage management system,
-with mobile app alongside it.
+Standardised a scalable design system from scratch, then used it to turn complex internal workflows into a streamlined backstage management system, with mobile app alongside it.
 
-The backstage management design shipped in November 2025.
+Backstage management design shipped in November 2025.
