@@ -19,7 +19,7 @@ location: "* Somewhere in the East *"
 tools:
   - Give-away
 status: ""
-heroImage: /src/assets/work/taoist-fu-lu-wallpapers/hero.png
+heroImage: ""
 links: []
 gallery:
   - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-01.png
@@ -35,7 +35,6 @@ gallery:
   - src: /src/assets/work/taoist-fú-lù-redesign/財神2.4.png
   - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-05.png
     title: 「文昌」
-  - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-06.png
   - src: /src/assets/work/taoist-fu-lu-wallpapers/fundraiser-event.png
     title: ""
   - src: /src/assets/work/taoist-fu-lu-wallpapers/plate-07.png
