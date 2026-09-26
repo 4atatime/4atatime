@@ -187,10 +187,10 @@ If a session ends without that, the work is still safe on your machine but
 npm test
 ```
 
-This drives a real browser through the site — about 127 checks across seven
+This drives a real browser through the site — about 147 checks across eight
 areas: the panel, the mobile layout, the category focus, the navigation, the
 sky. It takes a few minutes and starts its own server. At the end it prints
-either `all 7 suites passed` or which ones failed.
+either `all 8 suites passed` or which ones failed.
 
 Run it before shipping any change to the graph. It has caught things that
 looked perfectly fine in the code.
@@ -336,6 +336,10 @@ now, and each is worth keeping:
   the width is read through `clone`. Reading `.width` directly makes Astro
   publish the original files too, and doubles the build.
 - The music is 128 kbps AAC, not 320 kbps MP3.
+- The full-size plate viewer (added 2026-09-26) makes no files of its own.
+  It shows the largest copy each plate already has (1260px wide) by
+  reusing the plate's `srcset`. Publishing true originals for it would put
+  back the full-resolution copies the 2026-09-24 slimming removed.
 
 Check the size of a build with `npm run build && du -sh .vercel/output/static`.
 If it jumps, something started publishing originals again.

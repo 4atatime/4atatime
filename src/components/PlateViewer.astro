@@ -1,0 +1,196 @@
+---
+// A plate, full size. Pressing any image in a work's Plates section opens it
+// here: the picture at 70% of the screen, arrows to step through the rest of
+// that work's plates, and everything behind it drained to greyscale so the
+// one thing in colour is the thing you asked to see.
+//
+// It sits outside the detail panel rather than inside it. The panel is
+// transformed (that's how it slides), and a fixed element inside a
+// transformed one is fixed to *it* — the viewer would be clipped to the
+// panel's half of the screen.
+//
+// No new image files: the viewer reuses the plate's own srcset with a larger
+// `sizes`, so the browser fetches the 1260px copy that every build already
+// publishes. See ../scripts/plates.ts for the behaviour.
+---
+
+<div id="plate-viewer" class="viewer" role="dialog" aria-modal="true" aria-label="Plate" hidden>
+	<figure class="stage">
+		<img id="plate-viewer-img" alt="" decoding="async" />
+		<figcaption class="caption">
+			<span id="plate-viewer-count" class="count"></span>
+			<span id="plate-viewer-title" class="title"></span>
+		</figcaption>
+	</figure>
+	<button type="button" class="nav prev" data-plate-step="-1" aria-label="Previous plate">
+		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+	</button>
+	<button type="button" class="nav next" data-plate-step="1" aria-label="Next plate">
+		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+	</button>
+	<button type="button" class="shut" data-plate-close aria-label="Close plate">
+		<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+	</button>
+</div>
+
+<style>
+	.viewer {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: grid;
+		place-items: center;
+		/* The rest of the screen — field, legend, panel and all — keeps its
+		   shapes and loses its colour. A faint veil of the page colour on top
+		   takes the contrast down a step, so the plate is plainly the subject. */
+		background: color-mix(in srgb, var(--bg) 38%, transparent);
+		-webkit-backdrop-filter: grayscale(1);
+		backdrop-filter: grayscale(1);
+		opacity: 0;
+		transition: opacity 0.22s ease;
+		touch-action: pan-y;
+	}
+	.viewer.open {
+		opacity: 1;
+	}
+
+	.stage {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.7rem;
+	}
+	.stage img {
+		display: block;
+		/* 70% of the screen in whichever direction runs out first; the plate
+		   keeps its own proportions. */
+		max-width: 70vw;
+		max-height: 70vh;
+		width: auto;
+		height: auto;
+		object-fit: contain;
+		border: 1px solid var(--rule);
+		box-shadow: var(--shadow);
+		background: var(--surface);
+		user-select: none;
+		-webkit-user-drag: none;
+	}
+
+	.caption {
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		max-width: 70vw;
+		font-size: 0.78rem;
+		line-height: 1.35;
+		color: var(--fg);
+	}
+	.count {
+		flex: none;
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		letter-spacing: 0.1em;
+		color: var(--muted);
+	}
+	.title:empty {
+		display: none;
+	}
+
+	/* Same round, hairline-ringed button as the panel's own close, so the
+	   viewer reads as part of the same set of controls. */
+	.nav,
+	.shut {
+		position: absolute;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		border: 1px solid var(--border);
+		border-radius: 50%;
+		background: var(--bg);
+		color: var(--muted);
+		transition:
+			color 0.2s ease,
+			border-color 0.2s ease;
+	}
+	.nav:hover,
+	.nav:focus-visible,
+	.shut:hover,
+	.shut:focus-visible {
+		color: var(--fg);
+		border-color: var(--fg);
+	}
+	.nav svg,
+	.shut svg {
+		fill: none;
+		stroke: currentColor;
+		stroke-width: 1.7;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+
+	/* In the 15% margin either side of the plate, centred on it. */
+	.nav {
+		top: 50%;
+		width: 44px;
+		height: 44px;
+		transform: translateY(-50%);
+	}
+	.nav svg {
+		width: 18px;
+		height: 18px;
+	}
+	.prev {
+		left: max(var(--edge), calc(7.5vw - 22px));
+	}
+	.next {
+		right: max(var(--edge), calc(7.5vw - 22px));
+	}
+	.viewer.single .nav {
+		display: none;
+	}
+
+	.shut {
+		top: var(--edge);
+		right: var(--edge);
+		width: 36px;
+		height: 36px;
+	}
+	.shut svg {
+		width: 14px;
+		height: 14px;
+	}
+
+	/* A phone's 15% margin is about 58px: room for the arrow, not much else. */
+	@media (max-width: 720px) {
+		.nav {
+			width: 40px;
+			height: 40px;
+		}
+		.prev {
+			left: calc(7.5vw - 20px);
+		}
+		.next {
+			right: calc(7.5vw - 20px);
+		}
+	}
+
+	/* One cross on screen at a time. The panel's own close sits near this
+	   one — directly under it on a phone — and while a plate is up it would
+	   read as a second way out that does something different. */
+	:global(body:has(#plate-viewer:not([hidden])) #detail-close) {
+		visibility: hidden;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.viewer {
+			transition: none;
+		}
+	}
+</style>
+
+<script>
+	import { initPlates } from '../scripts/plates';
+	initPlates();
+</script>

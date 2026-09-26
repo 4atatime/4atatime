@@ -151,6 +151,15 @@ const MIN_ZOOM = 0.35;
 const MAX_ZOOM = 3;
 /** How much of the remaining distance the camera closes each frame. */
 const CAMERA_EASE = 0.09;
+/**
+ * A flicked finger's turn carries on for about this long after it lifts.
+ * Chosen so the glide starts at the finger's own speed: the camera closes
+ * CAMERA_EASE of the gap per ~16.7ms frame, so a gap of v·185ms is first
+ * closed at 0.09 × 185 / 16.7 ≈ 1 × v, and then slows smoothly to a stop.
+ */
+const FLICK_COAST_MS = 185;
+/** A finger that sat still this long before lifting was placed, not flicked. */
+const FLICK_STALE_MS = 80;
 /** The three-quarter view everything falls back to. */
 const DEFAULT_YAW = 0.4;
 const DEFAULT_PITCH = -0.25;
@@ -1074,6 +1083,49 @@ export function initGraph() {
 		node.ly = label.sy;
 	}
 
+	/**
+	 * Puts a node wherever it has to be for its circle to be drawn at (sx, sy)
+	 * this frame — project() run backwards, at the depth the node already has.
+	 *
+	 * Dragging used to add each pointer delta to the node through an
+	 * approximate inverse of the view rotation, which was exact only while the
+	 * field was level, and then let the simulation push the node about until
+	 * the next move. The circle slid off the finger, more so the further the
+	 * field was tilted.
+	 */
+	function holdUnder(node: SimNode, sx: number, sy: number) {
+		const cosYaw = Math.cos(yaw);
+		const sinYaw = Math.sin(yaw);
+		const cosPitch = Math.cos(pitch);
+		const sinPitch = Math.sin(pitch);
+		// The same drift project() adds, taken back off at the end, so it's the
+		// drawn circle — drift included — that sits under the pointer.
+		const amplitude = reducedMotion.matches ? 0 : DRIFT_AMPLITUDE;
+		const drift = Math.sin(clock * DRIFT_SPEED + node.phase) * amplitude;
+		const driftB = Math.cos(clock * DRIFT_SPEED * 0.8 + node.phase) * amplitude;
+		const view = viewFrame();
+		const fit = Math.max(0.0001, fitScale());
+
+		// Keep the node's distance from the camera; only its place across the
+		// screen changes.
+		const x = node.x + drift;
+		const y = node.y + driftB;
+		const z = node.z + drift * 0.6;
+		const z1 = -x * sinYaw + z * cosYaw;
+		const z2 = y * sinPitch + z1 * cosPitch;
+		const depth = CAMERA_DISTANCE / Math.max(200, CAMERA_DISTANCE - z2);
+
+		const x1 = ((sx - view.cx) / zoom + panX) / (depth * fit);
+		const y2 = ((sy - view.cy) / zoom + panY) / (depth * fit);
+		const back = -y2 * sinPitch + z2 * cosPitch;
+		node.x = x1 * cosYaw - back * sinYaw - drift;
+		node.y = y2 * cosPitch + z2 * sinPitch - driftB;
+		node.z = x1 * sinYaw + back * cosYaw - drift * 0.6;
+		node.vx = 0;
+		node.vy = 0;
+		node.vz = 0;
+	}
+
 	// --- Interaction state ------------------------------------------------
 	// The graph turns by itself when left alone; that's a continuous animation,
 	// so it's off for anyone who asked for less motion. The ripples are the
@@ -1085,7 +1137,10 @@ export function initGraph() {
 	/** True while the press is sliding the view rather than turning it. */
 	let panning = false;
 	let pointerMoved = false;
+	/** Where the last move left the pointer, so each move is a delta. */
 	let pointerStart = { x: 0, y: 0 };
+	/** Where the press began: the slop is measured from here, not per move. */
+	let pressOrigin = { x: 0, y: 0 };
 	/** Last pointer position while panning, so each move is a delta. */
 	let panFrom = { x: 0, y: 0 };
 	let pointerId: number | null = null;
@@ -1103,6 +1158,24 @@ export function initGraph() {
 	/** Set when a second finger lands: the span and zoom to scale from. */
 	let pinchStartSpan = 0;
 	let pinchStartZoom = 1;
+	/**
+	 * True while a finger (or pen) is on the canvas. The camera follows the
+	 * input directly then, instead of easing after it: easing is what makes a
+	 * mouse drag feel smooth, but under a finger it reads as the field
+	 * trailing a fraction of a second behind the hand holding it.
+	 */
+	let fingerDown = false;
+	/** How fast the finger was turning the field, for the glide after a flick. */
+	let flickYaw = 0;
+	let flickPitch = 0;
+	let flickAt = 0;
+	/**
+	 * While a work is being dragged: where on screen its circle has to be.
+	 * Re-applied every frame rather than once per move, so the simulation and
+	 * the idle drift can't pull it out from under the pointer in between.
+	 */
+	let grabAt = { x: 0, y: 0 };
+	let grabOffset = { x: 0, y: 0 };
 	// Measured once per content change rather than per frame: the box only
 	// changes size when a different work goes into it, and reading offsetWidth
 	// inside the render loop would force a layout every frame.
@@ -1665,12 +1738,19 @@ export function initGraph() {
 		// to be re-checked every frame rather than only after a gesture.
 		clampPan();
 
-		// Ease the camera toward wherever the input put the target.
-		yaw += (yawTarget - yaw) * CAMERA_EASE;
-		pitch += (pitchTarget - pitch) * CAMERA_EASE;
-		zoom += (zoomTarget - zoom) * CAMERA_EASE;
-		panX += (panXTarget - panX) * CAMERA_EASE;
-		panY += (panYTarget - panY) * CAMERA_EASE;
+		// Ease the camera toward wherever the input put the target — or, under
+		// a finger, be there already.
+		const ease = fingerDown ? 1 : CAMERA_EASE;
+		yaw += (yawTarget - yaw) * ease;
+		pitch += (pitchTarget - pitch) * ease;
+		zoom += (zoomTarget - zoom) * ease;
+		panX += (panXTarget - panX) * ease;
+		panY += (panYTarget - panY) * ease;
+
+		// After the camera has moved, so the circle lands where it's drawn.
+		if (dragNode !== null && pointerMoved) {
+			holdUnder(nodes[dragNode], grabAt.x + grabOffset.x, grabAt.y + grabOffset.y);
+		}
 
 		// Highlights and the filter fade instead of snapping.
 		const related = hovered === null ? null : neighbours[hovered];
@@ -1694,6 +1774,21 @@ export function initGraph() {
 		touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
 		lastInteraction = performance.now();
 
+		// A finger landing catches the field where it is — mid-turn, mid-glide
+		// — the way a hand stops a spinning globe. Without this, following the
+		// finger directly would first jump the camera to wherever it was
+		// still easing towards.
+		if (event.pointerType !== 'mouse' && !fingerDown) {
+			fingerDown = true;
+			yawTarget = yaw;
+			pitchTarget = pitch;
+			zoomTarget = zoom;
+			panXTarget = panX;
+			panYTarget = panY;
+			flickYaw = 0;
+			flickPitch = 0;
+		}
+
 		// A second finger turns whatever was happening into a pinch. Whatever
 		// the first finger had grabbed is let go, so the graph doesn't orbit
 		// wildly while the two fingers spread.
@@ -1711,6 +1806,7 @@ export function initGraph() {
 		pointerId = event.pointerId;
 		pointerMoved = false;
 		pointerStart = { x: event.clientX, y: event.clientY };
+		pressOrigin = pointerStart;
 		panFrom = { x: event.clientX, y: event.clientY };
 		const hit = nodeAt(event.clientX, event.clientY);
 		// Hold shift, or use the middle button, to slide the view instead of
@@ -1723,6 +1819,9 @@ export function initGraph() {
 			autoFit = false;
 		} else if (hit !== null) {
 			dragNode = hit;
+			// Held by the point it was picked up at, not snapped to its centre.
+			grabAt = { x: event.clientX, y: event.clientY };
+			grabOffset = { x: nodes[hit].sx - event.clientX, y: nodes[hit].sy - event.clientY };
 		} else {
 			orbiting = true;
 		}
@@ -1767,28 +1866,33 @@ export function initGraph() {
 			const dx = event.clientX - pointerStart.x;
 			const dy = event.clientY - pointerStart.y;
 			// A finger never lands as still as a mouse, and treating a 5px
-			// wobble as a drag is what makes taps feel unreliable.
+			// wobble as a drag is what makes taps feel unreliable. Measured from
+			// where the press began: measured per move, as it used to be, a
+			// steady drag never exceeded the slop in any single event — so a
+			// slow drag never became one, and lifting the finger at the end of
+			// it counted as a tap.
 			const slop = event.pointerType === 'mouse' ? MOUSE_SLOP : TOUCH_SLOP;
-			if (!pointerMoved && Math.hypot(dx, dy) > slop) pointerMoved = true;
+			const travelled = Math.hypot(event.clientX - pressOrigin.x, event.clientY - pressOrigin.y);
+			if (!pointerMoved && travelled > slop) pointerMoved = true;
 			pointerStart = { x: event.clientX, y: event.clientY };
 
 			if (orbiting) {
 				yawTarget += dx * 0.005;
 				pitchTarget = Math.max(-1.3, Math.min(1.3, pitchTarget + dy * 0.005));
+				// Smoothed turning speed, radians per ms, for the glide on release.
+				const dt = event.timeStamp - flickAt;
+				if (dt > 0 && dt < 100) {
+					flickYaw += ((dx * 0.005) / dt - flickYaw) * 0.5;
+					flickPitch += ((dy * 0.005) / dt - flickPitch) * 0.5;
+				} else {
+					flickYaw = 0;
+					flickPitch = 0;
+				}
+				flickAt = event.timeStamp;
 			} else if (dragNode !== null) {
-				// Move the node in the camera plane: undo the view rotation so a
-				// rightward drag is rightward on screen whatever the orbit angle.
-				const node = nodes[dragNode];
-				const scale = 1 / (node.depth * zoom * Math.max(0.0001, fitScale()));
-				const wx = dx * scale;
-				const wy = dy * scale;
-				node.x += wx * Math.cos(yaw);
-				node.z += wx * Math.sin(yaw);
-				node.y += wy * Math.cos(pitch);
-				node.z -= wy * Math.sin(pitch);
-				node.vx = 0;
-				node.vy = 0;
-				node.vz = 0;
+				// The frame loop puts the node here (holdUnder); the neighbours
+				// are re-heated so they rearrange around it.
+				grabAt = { x: event.clientX, y: event.clientY };
 				alpha = Math.max(alpha, 0.6);
 			}
 			return;
@@ -1811,6 +1915,7 @@ export function initGraph() {
 	function endPointer(event: PointerEvent) {
 		const wasPinching = pinching();
 		touches.delete(event.pointerId);
+		if (touches.size === 0) fingerDown = false;
 
 		// Lifting one finger out of a pinch shouldn't be read as a tap, and
 		// shouldn't hand the remaining finger a half-finished orbit either.
@@ -1825,6 +1930,17 @@ export function initGraph() {
 		if (pointerId !== event.pointerId) return;
 		const wasDragNode = dragNode;
 		const wasPanning = panning;
+		// A flick keeps turning a little after the finger lifts, then settles —
+		// the ordinary camera ease does the slowing down.
+		if (
+			orbiting &&
+			event.pointerType !== 'mouse' &&
+			event.type === 'pointerup' &&
+			event.timeStamp - flickAt < FLICK_STALE_MS
+		) {
+			yawTarget += flickYaw * FLICK_COAST_MS;
+			pitchTarget = Math.max(-1.3, Math.min(1.3, pitchTarget + flickPitch * FLICK_COAST_MS));
+		}
 		orbiting = false;
 		panning = false;
 		dragNode = null;

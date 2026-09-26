@@ -148,10 +148,15 @@
 		}
 
 		const panel = document.getElementById('detail-window');
+		const viewer = document.getElementById('plate-viewer');
 
-		/** True while the pointer is over the open detail panel. */
+		/** True while the pointer is over the open detail panel, or a plate opened from it. */
 		function overPanel(event: Event) {
-			return !!panel && !panel.hidden && panel.contains(event.target as Node);
+			const target = event.target as Node;
+			return (
+				(!!panel && !panel.hidden && panel.contains(target)) ||
+				(!!viewer && !viewer.hidden && viewer.contains(target))
+			);
 		}
 
 		window.addEventListener(
