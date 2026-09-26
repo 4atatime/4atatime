@@ -216,6 +216,8 @@ export function initWindow() {
 		// The preview box belongs to the graph as much as the canvas does, and
 		// its "Open the file" button is a change of subject, not an exit.
 		if (target?.closest?.('#graph-hud')) return;
+		// A plate opened full size is still part of the work it came from.
+		if (target?.closest?.('#plate-viewer')) return;
 		dismiss();
 	});
 

@@ -266,18 +266,48 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 			right: 5.5rem;
 			gap: 0.5rem;
 			padding: 0 0 0.7rem;
-			/* A scrim so the legend stays readable over the field, faded out
-			   in both directions rather than down only. A vertical fade was
-			   invisible while the page behind it was one flat colour; against
-			   the sky it drew its own right-hand edge, a grey rectangle sitting
-			   over the stars. Radial, so it runs out before it reaches any
-			   side of the box and there is no edge to see. */
-			background: radial-gradient(
-				104% 124% at 2% 0%,
-				var(--bg) 0%,
-				var(--bg) 28%,
-				transparent 70%
-			);
+			/* No scrim. There was one — a radial fade of the page colour — and
+			   however it was shaped it read as a box: flat --bg over the tinted
+			   sky, and a hard-edged rectangle where the faded mark and greeting
+			   were composited over it. The graph is already framed below the
+			   legend (measureChrome in graph.ts) and titles avoid it, so the
+			   only thing behind these words is sky. They carry their own
+			   contrast instead; see the text rules below. */
+		}
+
+		/* Stronger than the desktop legend, which sits on plain page colour:
+		   here the sky's drifts and stars run behind the text. */
+		.greeting {
+			color: var(--fg);
+			opacity: 0.78;
+		}
+		.label {
+			color: var(--fg);
+			opacity: 0.62;
+		}
+		.key li {
+			color: var(--fg);
+			opacity: 0.72;
+		}
+		.key-act {
+			opacity: 0.9;
+		}
+		.key .escape {
+			color: var(--accent);
+			opacity: 1;
+		}
+		.filter {
+			color: var(--fg);
+		}
+		.code {
+			color: var(--fg);
+			border-color: color-mix(in srgb, var(--fg) 26%, transparent);
+		}
+		.mark {
+			opacity: 0.7;
+		}
+		:global([data-theme='dark']) .mark {
+			opacity: 0.6;
 		}
 
 		/* Mark beside the greeting rather than above it — the single biggest
@@ -329,7 +359,7 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 			width: auto;
 			gap: 0.3rem;
 			padding: 0.18rem 0.42rem 0.18rem 0.28rem;
-			border: 1px solid var(--rule);
+			border: 1px solid color-mix(in srgb, var(--fg) 26%, transparent);
 			border-radius: 11px 4px 9px 6px / 6px 10px 4px 9px;
 		}
 		.filter[aria-pressed='true'] {

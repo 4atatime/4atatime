@@ -42,7 +42,7 @@ So, at the end of a piece of work:
 
 ## Testing
 
-`npm test` runs seven behaviour suites (~127 checks) in a real browser. It
+`npm test` runs eight behaviour suites (~147 checks) in a real browser. It
 starts its own dev server unless given a port: `npm test -- 4321`.
 
 These are behaviour checks, not unit tests. Most of what this site does is

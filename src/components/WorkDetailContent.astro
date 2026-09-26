@@ -136,6 +136,8 @@ const readings: { key: string; value: string }[] = [
 					{gallery.map((plate, i) => (
 						<li class="plate">
 							<figure>
+								{/* Opens the full-size viewer (PlateViewer.astro). */}
+								<button type="button" class="plate-open" data-plate={i} aria-label={`View plate ${i + 1} full size`}>
 								<Image
 									class={`organic-${(i % 6) + 1}`}
 									src={plate.src}
@@ -146,6 +148,7 @@ const readings: { key: string; value: string }[] = [
 									sizes="(min-width: 721px) 45vw, 92vw"
 									loading="lazy"
 								/>
+								</button>
 								<figcaption>
 									<span class="plate-no">{String(i + 1).padStart(2, '0')}</span>
 									<span class="plate-text">
@@ -442,6 +445,23 @@ const readings: { key: string; value: string }[] = [
 	}
 	.plate figure {
 		margin: 0;
+	}
+	/* The whole plate is the button: no chrome of its own, just the image. */
+	.plate-open {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+	}
+	/* Scoped through the panel's id so it outranks the pointer cursor that
+	   global.css gives every button in the panel. */
+	:global(#detail-window) .plate-open {
+		cursor: zoom-in;
+	}
+	.plate-open:focus-visible {
+		outline: 1px solid var(--accent);
+		outline-offset: 3px;
 	}
 	.plate figcaption {
 		display: flex;

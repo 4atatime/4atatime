@@ -31,12 +31,14 @@ html {
    there, so the two never show at once. The panel has to opt its own
    interactive parts back in to their usual cursors, because `cursor: inherit`
    on <button> (set below) would otherwise hand them the text caret. */
-#detail-window {
+#detail-window,
+#plate-viewer {
 	cursor: auto;
 }
 #detail-window a,
 #detail-window button,
-#detail-window [role='button'] {
+#detail-window [role='button'],
+#plate-viewer button {
 	cursor: pointer;
 }
 #detail-window .resizer {
