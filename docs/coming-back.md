@@ -322,9 +322,9 @@ replacement: a harness that can't reproduce the known failure proves nothing.
 **Don't push directly to `main`.** It's what's live. Work on `dev` and merge.
 
 **Vercel's free plan has 10 GB of Deployment Storage, and every deployment
-counts.** A deployment is a full copy of the built site, about 62 MB since
+counts.** A deployment is a full copy of the built site, about 63 MB since
 2026-09-27 (91 MB before the 2026-09-24 slimming, 46 MB after it; the
-sharper plate viewer added the difference, see below). Each CMS publish makes one. Vercel keeps the recent
+sharper image viewer added the difference, see below). Each CMS publish makes one. Vercel keeps the recent
 ones and deletes older ones when the limit is reached, so the site stays up.
 The warning in September came from a month of heavy building, when every push
 to `main` *and* every push to `dev` made a deployment. These things keep it low
@@ -339,7 +339,7 @@ now, and each is worth keeping:
 - The music is 128 kbps AAC, not 320 kbps MP3.
 - The full-size plate viewer has one extra copy per plate, and only where
   the original is bigger than 1260px. That copy is at most 2048px wide and
-  AVIF at quality 45, about 14 MB for all of them. WebP at 75 would have
+  AVIF at quality 45, about 15 MB for all of them, covers included. WebP at 75 would have
   been 26 MB, and the original files far more. Measured and compared on
   2026-09-26; the reasoning is in `WorkDetailContent.astro`. Only the viewer
   asks for these copies, so browsing a work doesn't load them.

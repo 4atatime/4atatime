@@ -1,9 +1,9 @@
 // The full-size plate viewer (markup in ../components/PlateViewer.astro).
 //
-// Plates are cloned into the panel from <template>s whenever a work opens, so
-// nothing here binds to a plate directly: one delegated click listener finds
-// whichever plate was pressed, and the set to step through is read off that
-// plate's own gallery at the moment it opens.
+// A work's images — its cover and its plates — are cloned into the panel from
+// <template>s whenever it opens, so nothing here binds to an image directly:
+// one delegated click listener finds whichever was pressed, and the set to
+// step through is read off that work's page at the moment it opens.
 //
 // The viewer has no hash of its own. It is a closer look at something already
 // open, not a place — so Back leaves the work, as it always has, and takes the
@@ -91,12 +91,13 @@ export function initPlates() {
 		}, CLOSE_MS);
 	}
 
-	// Any plate, in any work, whenever it was cloned in.
+	// Any image in any work — cover or plate — whenever it was cloned in.
 	document.addEventListener('click', (event) => {
 		const trigger = (event.target as Element | null)?.closest?.('[data-plate]');
 		if (!trigger) return;
-		const gallery = trigger.closest('.plates');
-		const list = [...(gallery?.querySelectorAll<HTMLImageElement>('[data-plate] img') ?? [])];
+		// Every image in the work steps together: the cover, then the plates.
+		const work = trigger.closest('.work');
+		const list = [...(work?.querySelectorAll<HTMLImageElement>('[data-plate] img') ?? [])];
 		const start = list.indexOf(trigger.querySelector('img') as HTMLImageElement);
 		if (start < 0) return;
 		open(list, start);

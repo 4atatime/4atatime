@@ -1,8 +1,8 @@
 ---
-// A plate, full size. Pressing any image in a work's Plates section opens it
-// here: the picture at 80% of the screen, arrows to step through the rest of
-// that work's plates, and everything behind it drained to greyscale so the
-// one thing in colour is the thing you asked to see.
+// An image, full size. Pressing any image on a work's page — the cover or a
+// plate — opens it here: the picture at 80% of the screen, arrows to step
+// through the rest of that work's images, and everything behind it drained
+// to an even grey so the one thing in colour is the thing you asked to see.
 //
 // It sits outside the detail panel rather than inside it. The panel is
 // transformed (that's how it slides), and a fixed element inside a
@@ -40,11 +40,14 @@
 		z-index: 80;
 		display: grid;
 		place-items: center;
-		/* The rest of the screen — field, legend, panel and all — keeps its
-		   shapes and loses its colour, and a veil of the page colour on top
-		   takes most of its contrast away too, so nothing behind competes with
-		   the plate. Still see-through: you can tell where you are. */
-		background: color-mix(in srgb, var(--bg) 72%, transparent);
+		/* The rest of the screen — field, legend, panel and all — loses its
+		   colour, and a veil of neutral grey takes most of its contrast too.
+		   The shapes are just there, so you can tell where you are; nothing
+		   competes with the image. A true grey, not a mix of the page and ink
+		   colours: those carry the palette's blue and it showed. A shade lighter
+		   by day and darker by night, so the caption reads on it either way. */
+		--veil: 146 146 146;
+		background: rgb(var(--veil) / 86%);
 		-webkit-backdrop-filter: grayscale(1);
 		backdrop-filter: grayscale(1);
 		opacity: 0;
@@ -53,6 +56,9 @@
 	}
 	.viewer.open {
 		opacity: 1;
+	}
+	:global([data-theme='dark']) .viewer {
+		--veil: 88 88 88;
 	}
 
 	.stage {
@@ -72,7 +78,6 @@
 		height: auto;
 		object-fit: contain;
 		border: 1px solid var(--rule);
-		box-shadow: var(--shadow);
 		background: var(--surface);
 		user-select: none;
 		-webkit-user-drag: none;
@@ -92,7 +97,9 @@
 		font-family: var(--font-mono);
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
-		color: var(--muted);
+		/* Caption colour, not --muted: that is tuned for page colour and
+		   all but disappears on the grey. */
+		opacity: 0.72;
 	}
 	.title:empty {
 		display: none;

@@ -163,9 +163,12 @@ function shift(a, b) {
   const page = await ctx.newPage();
   watch(page);
   await page.goto(base + '/', { waitUntil: 'networkidle' });
+  // A work whose cover has a large viewer copy and that has plates after it,
+  // so the first image opened is the cover and there's somewhere to step to.
   const id = await page.evaluate(() =>
     [...document.querySelectorAll('template[data-panel^="work/"]')]
-      .find(t => t.content.querySelectorAll('[data-plate]').length >= 3)?.dataset.panel);
+      .find(t => t.content.querySelector('.hero [data-plate][data-full]') &&
+        t.content.querySelectorAll('.plates [data-plate]').length >= 2)?.dataset.panel);
   const total = await page.evaluate((key) =>
     document.querySelector(`template[data-panel="${key}"]`).content.querySelectorAll('[data-plate]').length, id);
   await page.goto(base + '/#' + id, { waitUntil: 'networkidle' });
@@ -204,6 +207,8 @@ function shift(a, b) {
     return {
       open: !v.hidden && v.classList.contains('open'),
       loaded: img.complete && img.naturalWidth > 0,
+      shadow: getComputedStyle(img).boxShadow,
+      title: document.getElementById('plate-viewer-title').textContent,
       share: Math.max(r.width / innerWidth, r.height / innerHeight),
       src: img.currentSrc,
       count: document.getElementById('plate-viewer-count').textContent,
@@ -220,15 +225,15 @@ function shift(a, b) {
   }, null, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(400);
   let v = await viewer();
-  check('clicking a plate opens it full size', v.open && v.loaded);
-  check('the plate takes 80% of the screen', v.share > 0.79 && v.share < 0.805, `${(v.share * 100).toFixed(1)}%`);
-  // The first plate here has an original well over 1260px wide.
-  // Only the viewer's copies are AVIF (the panel's are WebP), so the format
+  check('clicking the cover opens it full size', v.open && v.loaded && /cover/.test(v.title), v.title);
+  check('the image takes 80% of the screen', v.share > 0.79 && v.share < 0.805, `${(v.share * 100).toFixed(1)}%`);
+  check('with no drop shadow around it', v.shadow === 'none', v.shadow);
+  // This cover has an original well over the panel's largest copy. Only the viewer's copies are AVIF (the panel's are WebP), so the format
   // of what loaded says which one the browser chose. naturalWidth can't: with
   // a srcset it's reported in CSS pixels, not the file's.
   check('on a sharp screen it shows the large copy, not the panel\'s', /avif/.test(v.src),
     v.src.slice(-60));
-  check('it starts at the plate that was clicked', v.count === `01 / ${String(total).padStart(2, '0')}`, v.count);
+  check('the cover is first, then the plates', v.count === `01 / ${String(total).padStart(2, '0')}`, v.count);
   const colourAfter = await saturation();
   check('the rest of the screen goes grey', colourBefore > 40 && colourAfter < 4,
     `legend's green chip, saturation ${colourBefore.toFixed(0)} -> ${colourAfter.toFixed(0)}`);
@@ -241,7 +246,7 @@ function shift(a, b) {
   }, null, { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(200);
   v = await viewer();
-  check('the right arrow shows the next plate', v.count.startsWith('02') && v.src !== firstSrc, v.count);
+  check('the right arrow shows the next image', v.count.startsWith('02') && v.src !== firstSrc, v.count);
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowLeft');
   await page.waitForTimeout(200);
@@ -256,7 +261,7 @@ function shift(a, b) {
   await page.locator('#detail-body [data-plate]').nth(1).click();
   await page.waitForTimeout(500);
   v = await viewer();
-  check('the second plate opens at 02', v.open && v.count.startsWith('02'), v.count);
+  check('the first plate opens at 02, after the cover', v.open && v.count.startsWith('02'), v.count);
   await page.mouse.click(30, 450);
   await page.waitForTimeout(400);
   v = await viewer();
