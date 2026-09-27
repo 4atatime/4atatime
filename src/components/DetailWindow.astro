@@ -179,6 +179,15 @@
 		padding: var(--edge);
 		padding-bottom: calc(var(--edge) * 2.5);
 	}
+	/* On a desktop the sides get a little more, and grow with the panel: a
+	   percentage padding is a share of the panel's own width, so dragging the
+	   edge out widens the margins along with the text between them. The top
+	   stays at --edge, which is what lines a panel heading up with the logo. */
+	@media (min-width: 721px) {
+		.body {
+			padding-inline: max(2.25rem, 4.5%);
+		}
+	}
 
 	@media (prefers-reduced-motion: reduce) {
 		.window {
