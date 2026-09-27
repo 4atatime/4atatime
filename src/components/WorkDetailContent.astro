@@ -56,26 +56,27 @@ function widthOf(image: ImageMetadata): number {
 	return (quiet ?? image).width;
 }
 
-// The full-size viewer's own copy of each plate (PlateViewer.astro). Shown at
-// 80% of the screen, the 1260px copy was being stretched and looked soft on
-// any high-density display. Only plates whose original is bigger get one, it
+// The full-size viewer's own copy of each image — the cover and every plate
+// open in it (PlateViewer.astro). Shown at 80% of the screen, the panel's own
+// largest copy was being stretched and looked soft on any high-density
+// display. Only images whose original is bigger than that copy get one, it
 // is never larger than the original, and only the viewer asks for it — the
-// panel's own srcset doesn't list it, so browsing a work costs nothing more.
+// panel's srcset doesn't list it, so browsing a work costs nothing more.
 //
 // AVIF at 45 rather than WebP at 75: the same sharpness on text and line, a
 // touch less of the finest grain, and half the size — 14 MB a deployment for
 // all of them against 26 MB (measured 2026-09-26; see docs/coming-back.md).
 const VIEWER_MAX = 2048;
 const VIEWER_QUALITY = 45;
-const fullSize = await Promise.all(
-	gallery.map(async (plate) => {
-		const original = widthOf(plate.src);
-		if (original <= PLATE_MAX) return null;
-		const width = Math.min(original, VIEWER_MAX);
-		const image = await getImage({ src: plate.src, width, quality: VIEWER_QUALITY, format: 'avif' });
-		return { src: image.src, width };
-	}),
-);
+async function viewerCopy(source: ImageMetadata, panelMax: number) {
+	const original = widthOf(source);
+	if (original <= panelMax) return null;
+	const width = Math.min(original, VIEWER_MAX);
+	const image = await getImage({ src: source, width, quality: VIEWER_QUALITY, format: 'avif' });
+	return { src: image.src, width };
+}
+const heroFull = heroImage ? await viewerCopy(heroImage, HERO_MAX) : null;
+const fullSize = await Promise.all(gallery.map((plate) => viewerCopy(plate.src, PLATE_MAX)));
 
 // Category, year, and two opaque characters — see ../lib/serial.ts. Stable
 // per work, and it groups the way the collection does.
@@ -129,16 +130,25 @@ const readings: { key: string; value: string }[] = [
 	{
 		heroImage && (
 			<figure class="hero">
-				<Image
-					class="organic-1"
-					src={heroImage}
-					alt={`${title} — cover`}
-					width={Math.min(widthOf(heroImage), HERO_MAX)}
-					widths={[480, 960, HERO_MAX]}
-					quality={QUALITY}
-					sizes="(min-width: 721px) 45vw, 92vw"
-					loading="eager"
-				/>
+				<button
+					type="button"
+					class="plate-open"
+					data-plate="cover"
+					data-full={heroFull?.src}
+					data-full-width={heroFull?.width}
+					aria-label="View the cover full size"
+				>
+					<Image
+						class="organic-1"
+						src={heroImage}
+						alt={`${title} — cover`}
+						width={Math.min(widthOf(heroImage), HERO_MAX)}
+						widths={[480, 960, HERO_MAX]}
+						quality={QUALITY}
+						sizes="(min-width: 721px) 45vw, 92vw"
+						loading="eager"
+					/>
+				</button>
 			</figure>
 		)
 	}
