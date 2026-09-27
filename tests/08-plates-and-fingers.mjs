@@ -4,7 +4,8 @@
 //     dragged work stays under the finger that holds it;
 //   · the phone legend has no background of its own;
 //   · a work's plates open full size, step left and right, and close again —
-//     with everything behind them drained to grey.
+//     with everything behind them drained to grey;
+//   · a work's text runs the width of the panel, however wide it's dragged.
 import { chromium, devices } from 'playwright';
 import { discsOn } from './lib/blobs.mjs';
 const PORT = process.argv[2];
@@ -157,7 +158,8 @@ function shift(a, b) {
 
 // ─── Desktop ────────────────────────────────────────────────────────────────
 {
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
+  // A high-density screen, which is where a stretched plate looked soft.
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: 'light' });
   const page = await ctx.newPage();
   watch(page);
   await page.goto(base + '/', { waitUntil: 'networkidle' });
@@ -210,10 +212,22 @@ function shift(a, b) {
   });
 
   await page.locator('#detail-body [data-plate]').first().click();
-  await page.waitForTimeout(700);
+  // In dev the large copy is encoded on first request, which takes a moment;
+  // built, it's a plain file.
+  await page.waitForFunction(() => {
+    const i = document.getElementById('plate-viewer-img');
+    return i.complete && i.naturalWidth > 0;
+  }, null, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(400);
   let v = await viewer();
   check('clicking a plate opens it full size', v.open && v.loaded);
-  check('the plate takes 70% of the screen', v.share > 0.69 && v.share < 0.705, `${(v.share * 100).toFixed(1)}%`);
+  check('the plate takes 80% of the screen', v.share > 0.79 && v.share < 0.805, `${(v.share * 100).toFixed(1)}%`);
+  // The first plate here has an original well over 1260px wide.
+  // Only the viewer's copies are AVIF (the panel's are WebP), so the format
+  // of what loaded says which one the browser chose. naturalWidth can't: with
+  // a srcset it's reported in CSS pixels, not the file's.
+  check('on a sharp screen it shows the large copy, not the panel\'s', /avif/.test(v.src),
+    v.src.slice(-60));
   check('it starts at the plate that was clicked', v.count === `01 / ${String(total).padStart(2, '0')}`, v.count);
   const colourAfter = await saturation();
   check('the rest of the screen goes grey', colourBefore > 40 && colourAfter < 4,
@@ -221,7 +235,11 @@ function shift(a, b) {
 
   const firstSrc = v.src;
   await page.locator('#plate-viewer .next').click();
-  await page.waitForTimeout(300);
+  await page.waitForFunction(() => {
+    const i = document.getElementById('plate-viewer-img');
+    return i.complete && i.naturalWidth > 0;
+  }, null, { timeout: 30000 }).catch(() => {});
+  await page.waitForTimeout(200);
   v = await viewer();
   check('the right arrow shows the next plate', v.count.startsWith('02') && v.src !== firstSrc, v.count);
   await page.keyboard.press('ArrowLeft');
@@ -251,6 +269,33 @@ function shift(a, b) {
   v = await viewer();
   check('the cross closes it', !v.open && v.panelOpen);
   check('and colour comes back', (await saturation()) > colourBefore * 0.8);
+
+  // --- Text follows the panel's width -------------------------------------
+  // Every text block should end where the panel's margin does — the prose,
+  // the intro and the readings alike — and move with it when it's dragged.
+  const measure = () => page.evaluate(() => {
+    const body = document.getElementById('detail-body');
+    const cs = getComputedStyle(body);
+    const inner = body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const w = (sel) => document.querySelector('#detail-body ' + sel)?.getBoundingClientRect().width ?? 0;
+    return { inner, side: parseFloat(cs.paddingLeft), head: w('.slip .head'), intro: w('.intro'), readings: w('.readings'), prose: w('.body'), label: w('.section-label') };
+  });
+  // The intro and readings sit in the header's column, beside the sheet
+  // number; the prose and the section rules run the full width below it.
+  const fills = (m) =>
+    ['prose', 'label'].every(k => Math.abs(m[k] - m.inner) < 2) &&
+    ['intro', 'readings'].every(k => Math.abs(m[k] - m.head) < 2) &&
+    m.head > m.inner - 80;
+  const atHalf = await measure();
+  check('text runs the width of the panel', fills(atHalf),
+    `space ${atHalf.inner.toFixed(0)}px: prose ${atHalf.prose.toFixed(0)}, header column ${atHalf.head.toFixed(0)}, intro ${atHalf.intro.toFixed(0)}, readings ${atHalf.readings.toFixed(0)}`);
+  check('the desktop panel margin is a little wider than the page edge', atHalf.side >= 36 && atHalf.side <= 48, `${atHalf.side}px`);
+  await page.evaluate(() => document.getElementById('detail-window').style.setProperty('--window-width', '1100px'));
+  await page.waitForTimeout(400);
+  const wide = await measure();
+  check('and still does with the panel dragged wider', fills(wide) && wide.prose > atHalf.prose + 300,
+    `space ${wide.inner.toFixed(0)}px: prose ${wide.prose.toFixed(0)}`);
+  check('the margins grow with it', wide.side > atHalf.side, `${atHalf.side}px -> ${wide.side}px`);
   await ctx.close();
 }
 

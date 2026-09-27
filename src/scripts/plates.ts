@@ -38,16 +38,27 @@ export function initPlates() {
 	function show(i: number) {
 		index = (i + plates.length) % plates.length;
 		const source = plates[index];
-		// The plate's own srcset, offered at the size it's now shown at, so the
-		// browser picks the largest published copy — no extra files built.
+		// The plate's own srcset plus, where the original had the pixels, the
+		// larger copy built for this viewer — offered at the size it's shown at,
+		// so the browser takes the sharpest one the screen can use.
+		const trigger = source.closest<HTMLElement>('[data-plate]');
+		const full = trigger?.dataset.full;
+		const fullWidth = trigger?.dataset.fullWidth;
 		img.removeAttribute('src');
-		img.sizes = '70vw';
-		img.srcset = source.srcset;
+		img.sizes = '80vw';
+		img.srcset = full && fullWidth ? `${source.srcset}, ${full} ${fullWidth}w` : source.srcset;
 		img.src = source.currentSrc || source.src;
 		img.alt = source.alt;
 		count.textContent = `${String(index + 1).padStart(2, '0')} / ${String(plates.length).padStart(2, '0')}`;
 		title.textContent = source.alt;
 	}
+
+	// The large copy is AVIF. A browser that can't decode it would show a
+	// broken image, so fall back to the plate's own copies once.
+	img.addEventListener('error', () => {
+		const source = plates[index];
+		if (source && img.srcset !== source.srcset) img.srcset = source.srcset;
+	});
 
 	function open(list: HTMLImageElement[], start: number) {
 		window.clearTimeout(closingTimer);

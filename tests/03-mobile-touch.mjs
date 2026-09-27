@@ -1,6 +1,6 @@
 // Mobile interaction: the gestures and the two-sheet flow.
 import { chromium, devices } from 'playwright';
-import { cloudBox } from './lib/blobs.mjs';
+import { cloudBox, discsOn } from './lib/blobs.mjs';
 const PORT = process.argv[2];
 const base = 'http://localhost:' + PORT;
 const browser = await chromium.launch();
@@ -60,8 +60,15 @@ check('two fingers pinching zooms out', afterIn !== null && afterIn < afterOut *
   `cloud ${afterOut?.toFixed(0)}px -> ${afterIn?.toFixed(0)}px`);
 
 // --- One finger still turns the field -------------------------------------
+// A sideways drag turns the field about its vertical axis. That swings the
+// cloud's *width* about freely — it is long and thin, and seen side-on it can
+// be 50% wider with no zoom at all, which is how this check came to fail once
+// the flick glide (2026-09-26) let a drag carry the turn a little further. Its
+// *height* hardly moves under a turn like that, and a zoom changes both, so
+// the height is what tells the two apart.
 await page.waitForTimeout(300);
-const spreadBeforeDrag = await spread();
+const heightBeforeDrag = (await cloudBox(page, 60))?.h ?? null;
+const worksBeforeDrag = await discsOn(page);
 // A one-finger drag across empty space must orbit, not zoom.
 const client = await page.context().newCDPSession(page);
 await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: box.x + 30, y: cy, id: 0 }] });
@@ -72,12 +79,14 @@ for (let i = 1; i <= 10; i++) {
 await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 await client.detach();
 await page.waitForTimeout(600);
-const spreadAfterDrag = await spread();
-// Orbiting changes which way the cloud faces, so its drawn extent moves a
-// little; zooming would change it by a lot. 15% is comfortably between.
-check('one finger drag turns the field without zooming',
-  spreadAfterDrag !== null && Math.abs(spreadAfterDrag - spreadBeforeDrag) / spreadBeforeDrag < 0.15,
-  `cloud ${spreadBeforeDrag?.toFixed(0)}px -> ${spreadAfterDrag?.toFixed(0)}px`);
+const heightAfterDrag = (await cloudBox(page, 60))?.h ?? null;
+const worksAfterDrag = await discsOn(page);
+const moved = worksBeforeDrag.map(p => Math.min(...worksAfterDrag.map(q => Math.hypot(p.x - q.x, p.y - q.y)))).sort((a, b) => a - b);
+check('one finger drag turns the field', moved.length > 0 && moved[moved.length >> 1] > 8,
+  `works moved ${moved[moved.length >> 1]?.toFixed(0)}px`);
+check('without zooming',
+  heightBeforeDrag && heightAfterDrag && Math.abs(heightAfterDrag - heightBeforeDrag) / heightBeforeDrag < 0.15,
+  `cloud height ${heightBeforeDrag?.toFixed(0)}px -> ${heightAfterDrag?.toFixed(0)}px`);
 
 // --- Preview sheet --------------------------------------------------------
 await page.reload({ waitUntil: 'networkidle' });
