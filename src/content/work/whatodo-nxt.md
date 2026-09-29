@@ -19,9 +19,10 @@ tools:
   - design
   - dev
 status: still some bugs to fix *procrastinating*
+link: https://4atatime.github.io/whatodonxt/index.html
 heroImage: /src/assets/work/whatodo-nxt/hero.png
 links:
-  - label: Live site
+  - label: the site
     href: https://4atatime.github.io/whatodonxt/index.html
   - label: Oblique Strategies
     href: https://en.wikipedia.org/wiki/Oblique_Strategies
@@ -31,16 +32,14 @@ gallery:
 ---
 ## At a glance
 
-Whatodo:nxt is a personal project that lives somewhere between random (useless) tool, cute (useless) object, and gentle (unsolicited and quite often also useless) life advices.
+[Whatodo:nxt](https://4atatime.github.io/whatodonxt/index.html) is a personal project that lives somewhere between random (and useless) tool, cute (and  useless) object, and gentle (unsolicited and quite often also useless) life advices.
 
-It was inspired by [Oblique Strategies](https://en.wikipedia.org/wiki/Oblique_Strategies), a card-based creativity method created by Brian Eno and Peter Schmidt in 1975. The premise is beautifully simple: when you're stuck, pull a card. Each one offers a cryptic nudge — an aphorism, a reframe, a small permission — to get you moving again.
+It was initially inspired by [Oblique Strategies](https://en.wikipedia.org/wiki/Oblique_Strategies), a card-based creativity method created by Brian Eno and Peter Schmidt in 1975. The premise is beautifully simple: when you're stuck, pull a card. Each one offers a cryptic nudge: an aphorism, a reframe, a small permission, to get you moving again.
 
-I wanted to make something like that, but softer. Less strategy, more chamomile.
-
-*(Best experienced on mobile — or resize your viewport if you're on desktop.)*
+I wanted to make something like that, but softer. Less strategy, more chamomile <3
 
 ## Idea → prototype → code
 
-For my own project, I wrote a few pieces of "soft advice", which appear after each tap and spin of the chamomile flower — a subtle nod to *The Flower with Seven Colours*.
+I wrote a few pieces of "soft advice", which appear after each tap and spin of the chamomile flower (a subtle nod to *The Flower with Seven Colours, iykyk)*.
 
-It's absolutely NOT the best functioning website, due to my then very entry-level coding skills (it's better now!). However, I see it as not only a product of my personal art direction and first try at web development, but also an embodiment of my views and approaches towards life, in that particular period of my life.
+It's absolutely NOT the best functioning website, due to my then very entry-level coding skills (it's better now!). However, I see it as not only a product of my personal art direction and first try at web development, but also an embodiment of my views and approaches towards my life, in that particular period.
