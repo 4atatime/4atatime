@@ -21,7 +21,7 @@ status: ""
 link: ""
 heroImage: /src/assets/work/4-see/hero.jpg
 links:
-  - label: Are.na — holy cement
+  - label: Are.na >> holy cement
     href: https://www.are.na/4-atatime/holy-cement
 gallery:
   - src: /src/assets/work/4-see/baku-9.jpg

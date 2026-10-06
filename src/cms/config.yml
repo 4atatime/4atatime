@@ -38,7 +38,7 @@ collections:
     delete: true
     slug: '{{slug}}'
     identifier_field: title
-    summary: '{{title}} — {{section}}'
+    summary: '{{title}} - {{section}}'
     sortable_fields: [sortDate, title, section]
     # Per-work media folders, so a new upload lands beside that work's other
     # images rather than in one flat heap.
@@ -54,12 +54,12 @@ collections:
         widget: select
         hint: >-
           The main category. Sets the stamp above the title, which filter the
-          work appears under, and — because different categories are pushed
-          apart — roughly where it lands in the graph.
+          work appears under, and - because different categories are pushed
+          apart - roughly where it lands in the graph.
         options:
-          - 'UI/UX'
           - 'Grafix'
           - 'Ink!'
+          - 'UI/UX'
           - 'mμsic'
 
       - label: Intro
@@ -70,7 +70,7 @@ collections:
       - label: When (as displayed)
         name: date
         widget: string
-        hint: 'Free text, exactly as it should read: 06/2025, 2024 – ongoing, coming-soon.'
+        hint: 'Free text, exactly as it should read: 06/2025, 2024 - ongoing, coming-soon.'
 
       - label: Sort date
         name: sortDate
@@ -87,7 +87,7 @@ collections:
         min: 1
         max: 10
         hint: >-
-          Pick 5–10. Works sharing tags are drawn together in the graph, so
+          Pick 5-10. Works sharing tags are drawn together in the graph, so
           these decide the shape of the homepage as much as they label the work.
         options: __TAGS__
 
@@ -155,7 +155,7 @@ collections:
             name: href
             widget: string
             required: false
-            hint: Where this plate should link to — an Instagram post, for example.
+            hint: Where this plate should link to - an Instagram post, for example.
 
       - label: Long text
         name: body

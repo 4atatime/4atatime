@@ -122,7 +122,7 @@ const readings: { key: string; value: string }[] = [
 					<Image
 						class="organic-1"
 						src={heroImage}
-						alt={`${title} — cover`}
+						alt={`${title} - cover`}
 						width={Math.min(widthOf(heroImage), HERO_MAX)}
 						widths={[480, 960, HERO_MAX]}
 						quality={QUALITY}
@@ -160,7 +160,7 @@ const readings: { key: string; value: string }[] = [
 								<Image
 									class={`organic-${(i % 6) + 1}`}
 									src={plate.src}
-									alt={plate.title ?? `${title} — plate ${i + 1}`}
+									alt={plate.title ?? `${title} - plate ${i + 1}`}
 									width={Math.min(widthOf(plate.src), PLATE_MAX)}
 									widths={[420, 840, PLATE_MAX]}
 									quality={QUALITY}

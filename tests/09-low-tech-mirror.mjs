@@ -11,12 +11,37 @@ const browser = await chromium.launch();
 const ok = [], bad = [];
 const check = (n, pass, d = '') => (pass ? ok : bad).push(n + (d ? ` (${d})` : ''));
 
+// Long dashes anywhere a visitor can meet them: the text, the text inside
+// templates the panel clones, and alt/title/aria-label. Lexie asked for none
+// (2026-10-06): an aside takes a spaced hyphen, a path >>, arrows stay arrows.
+const DASHES = /[\u2013\u2014]/;
+const dashesOn = (pg) => pg.evaluate((source) => {
+  const re = new RegExp(source);
+  const found = [];
+  const look = (text, where) => {
+    const m = re.exec(text);
+    if (m) found.push(`${where}: …${text.slice(Math.max(0, m.index - 30), m.index + 30).replace(/\s+/g, ' ')}…`);
+  };
+  look(document.title, 'title');
+  look(document.body.innerText, 'text');
+  for (const t of document.querySelectorAll('template')) look(t.content.textContent, 'template');
+  for (const el of document.querySelectorAll('[alt],[title],[aria-label]'))
+    for (const a of ['alt', 'title', 'aria-label']) if (el.hasAttribute(a)) look(el.getAttribute(a), a);
+  for (const t of document.querySelectorAll('template'))
+    for (const el of t.content.querySelectorAll('[alt],[aria-label]'))
+      for (const a of ['alt', 'aria-label']) if (el.hasAttribute(a)) look(el.getAttribute(a), a);
+  return found;
+}, DASHES.source);
+
 const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'light' });
 const page = await ctx.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(base + '/', { waitUntil: 'networkidle' });
 await page.waitForTimeout(1500);
+
+const mainDashes = await dashesOn(page);
+check('no long dashes anywhere on the main site', mainDashes.length === 0, mainDashes[0] ?? '');
 
 // --- the doors on the main site ---
 const doors = () => page.$$eval('a[data-low-tech]', (as) => as.map((a) => a.getAttribute('href')));
@@ -125,6 +150,15 @@ check('the mirror lists every work the main site has',
 check('and About & Contact', (await mirror.$('#about')) !== null);
 check('its door back leads to the main site\'s front page',
   (await mirror.$eval('.door a', (a) => a.getAttribute('href'))) === '/');
+check('and is called the (unnecessarily) graphic heavy version',
+  /\(unnecessarily\) graphic heavy/.test(await mirror.$eval('.door a', (a) => a.textContent)));
+const order = await mirror.$$eval('h3[id]', (hs) => hs.map((h) => h.id).join(' '));
+check('collections in the order Grafix, Ink!, UI/UX, mμsic', order === 'grafix ink uiux music', order);
+// Kaomoji are all hidden from screen readers, so that's how to count them.
+const kaomoji = await mirror.$$eval('body > :not(.still) [aria-hidden="true"], body > [aria-hidden="true"]', (els) =>
+  els.map((el) => el.textContent.trim()).filter(Boolean));
+check('no more than four kaomoji', kaomoji.length > 0 && kaomoji.length <= 4, kaomoji.join('  '));
+let mirrorDashes = await dashesOn(mirror);
 
 let missing = [], wrong = [], notDithered = [], noColour = [], badPictures = [];
 for (const w of truth) {
@@ -139,6 +173,7 @@ for (const w of truth) {
     door: document.querySelector('.door a')?.getAttribute('href'),
   }));
   if (got.title !== w.title || got.intro !== w.intro) wrong.push(w.id);
+  mirrorDashes.push(...(await dashesOn(mirror)).map((d) => `${w.id} ${d}`));
   if (got.pictures.length !== w.pictures) missing.push(`${w.id} ${got.pictures.length}/${w.pictures}`);
   if (got.door !== `/#work/${w.id}`) wrong.push(`${w.id} door ${got.door}`);
   for (const p of got.pictures) {
@@ -156,6 +191,7 @@ check('every picture is published', badPictures.length === 0, badPictures.slice(
 check('every picture is a dither of at most four greys, at the size the page says',
   notDithered.length === 0, notDithered.slice(0, 2).join('; '));
 check('every picture links to a colour copy that exists', noColour.length === 0, noColour.slice(0, 2).join('; '));
+check('no long dashes anywhere in the mirror', mirrorDashes.length === 0, mirrorDashes[0] ?? '');
 check('nothing is fetched from anywhere else, fonts included', elsewhere.length === 0, elsewhere[0] ?? '');
 check('no scripts of its own', scripts.length === 0, scripts[0] ?? '');
 
@@ -176,6 +212,31 @@ for (const path of ['/low-tech/', `/low-tech/${sample}/`]) {
   if (wide > 0) overflow.push(`${path} ${wide}px`);
 }
 check('on a phone, no page scrolls sideways', overflow.length === 0, overflow.join('; '));
+
+// Margins, measured where the text actually starts and the page actually
+// ends: 40-80px a side on a phone, 180-260px on a desktop, and 40-80px above
+// and below everywhere (Lexie, 2026-10-06).
+const gaps = async (pg) => pg.evaluate(() => {
+  const first = document.querySelector('body > p').getBoundingClientRect();
+  const last = document.querySelector('body > p:last-of-type').getBoundingClientRect();
+  return {
+    left: Math.round(first.left + scrollX), right: Math.round(innerWidth - first.right),
+    top: Math.round(first.top + scrollY),
+    bottom: Math.round(document.documentElement.scrollHeight - (last.bottom + scrollY)),
+  };
+});
+const within = (v, lo, hi) => v >= lo && v <= hi;
+await p.goto(base + '/low-tech/', { waitUntil: 'load' });
+const onPhone = await gaps(p);
+check('on a phone, 40-80px either side, and above and below',
+  within(onPhone.left, 40, 80) && within(onPhone.right, 40, 80) && within(onPhone.top, 40, 80) && within(onPhone.bottom, 40, 80),
+  JSON.stringify(onPhone));
+const desk = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await desk.goto(base + '/low-tech/', { waitUntil: 'load' });
+const onDesk = await gaps(desk);
+check('on a desktop, 180-260px either side, 40-80px above and below',
+  within(onDesk.left, 180, 260) && within(onDesk.right, 180, 260) && within(onDesk.top, 40, 80) && within(onDesk.bottom, 40, 80),
+  JSON.stringify(onDesk));
 
 check('no console errors', errors.length === 0, errors[0] ?? '');
 await browser.close();

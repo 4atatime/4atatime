@@ -4,7 +4,7 @@ section: Grafix
 intro: "A tiny fun project with my dear friend, who's becoming a Taoist
   \"Shifu\": give-away wallpapers with actual Taoist \"Fú Lù (符箓)\" for good
   luck, 3 different themes."
-date: 12/2025 – 01/2026
+date: 12/2025 - 01/2026
 sortDate: 2026-01-01
 tags:
   - Wallpaper
@@ -41,4 +41,4 @@ gallery:
 ---
 A tiny fun project with my dear friend, who's becoming a Taoist "Shifu": give-away wallpapers with real Taoist Fú Lù (符箓) for good luck, in three different themes.
 
-Published on Xiaohongshu, ongoing — also available as prints and on commission.
+Published on Xiaohongshu, ongoing - also available as prints and on commission.

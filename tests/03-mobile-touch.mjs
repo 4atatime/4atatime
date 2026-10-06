@@ -66,8 +66,10 @@ check('two fingers pinching zooms out', afterIn !== null && afterIn < afterOut *
 // the flick glide (2026-09-26) let a drag carry the turn a little further. Its
 // *height* hardly moves under a turn like that, and a zoom changes both, so
 // the height is what tells the two apart.
+// Measured on the field alone: the turn moves the sky too, and two stars that
+// drift together are otherwise counted as part of the cloud.
 await page.waitForTimeout(300);
-const heightBeforeDrag = (await cloudBox(page, 60))?.h ?? null;
+const heightBeforeDrag = (await cloudBox(page, 60, 140, { largest: true }))?.h ?? null;
 const worksBeforeDrag = await discsOn(page);
 // A one-finger drag across empty space must orbit, not zoom.
 const client = await page.context().newCDPSession(page);
@@ -79,7 +81,7 @@ for (let i = 1; i <= 10; i++) {
 await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 await client.detach();
 await page.waitForTimeout(600);
-const heightAfterDrag = (await cloudBox(page, 60))?.h ?? null;
+const heightAfterDrag = (await cloudBox(page, 60, 140, { largest: true }))?.h ?? null;
 const worksAfterDrag = await discsOn(page);
 const moved = worksBeforeDrag.map(p => Math.min(...worksAfterDrag.map(q => Math.hypot(p.x - q.x, p.y - q.y)))).sort((a, b) => a - b);
 check('one finger drag turns the field', moved.length > 0 && moved[moved.length >> 1] > 8,

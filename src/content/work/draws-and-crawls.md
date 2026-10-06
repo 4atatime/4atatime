@@ -1,7 +1,7 @@
 ---
 title: "Draws & Crawls "
 section: Grafix
-intro: Illustrations & sketches from a few years back — my illustration style
+intro: Illustrations & sketches from a few years back - my illustration style
   drastically changed over the years so it's really just an archive. Mostly
   coloured and digital.
 date: c. 2019-2021
@@ -22,7 +22,7 @@ tools:
 link: ""
 heroImage: /src/assets/work/draws-and-crawls/hero.png
 links:
-  - label: Are.na — old drawings
+  - label: Are.na >> old drawings
     href: https://www.are.na/4-atatime/old-drawings
 gallery:
   - src: /src/assets/work/draws-crawls/the-world-is-my-pasta.jpg

@@ -2,7 +2,7 @@
 title: Dreams of Reality
 section: Ink!
 intro: Mixed media dreamscapes, made as tattoo flashes.
-date: 2023 – ongoing
+date: 2023 - ongoing
 sortDate: 2023-01-01
 tags:
   - Tattoo

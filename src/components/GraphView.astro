@@ -26,7 +26,7 @@ const { data } = Astro.props;
 				data.nodes.map((node) => (
 					<li>
 						<a href={`#work/${node.id}`} data-graph-focus={node.id}>
-							{node.title} — {[node.section, ...node.tags].join(', ')}
+							{node.title} - {[node.section, ...node.tags].join(', ')}
 						</a>
 					</li>
 				))

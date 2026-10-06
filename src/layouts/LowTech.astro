@@ -9,9 +9,16 @@
 //     visited, grey rules, and a dark page if the visitor's system is dark
 //     (`color-scheme`) — the only "theme switch" a page needs;
 //   · in place of a logo, one typographic move, after Low←Tech Magazine's
-//     arrow: 4atatime ←low-tech, and the way back is high-tech→;
+//     arrow: 4atatime ←low-tech, and the way back is the
+//     (unnecessarily) graphic heavy→ version (Lexie's name for it);
 //   · the page says what it weighs, measured off the built files by
-//     src/integrations/page-weight.mjs (in `astro dev` it says so instead).
+//     src/integrations/page-weight.mjs (in `astro dev` it says so instead);
+//   · a few kaomoji, four at most across the whole mirror (Lexie's limit):
+//     the hello, mμsic, the sign-off, and this door. Hidden from screen
+//     readers, which would read them out glyph by glyph.
+//
+// Dashes: none of the long ones, by request (2026-10-06). An aside takes a
+// spaced hyphen, a path takes >>, and the arrows stay arrows.
 //
 // Deliberately not BaseHead.astro: that pulls in the main site's stylesheet
 // and four web fonts, which is most of what this version exists to leave out.
@@ -22,13 +29,13 @@ import { LOW_TECH } from '../lib/low-tech';
 interface Props {
 	title: string;
 	description?: string;
-	/** Where the "high-tech" door opens: the same work in the field, or the front page. */
-	highTech: string;
+	/** Where the door to the graphic-heavy version opens: the same work in the field, or the front page. */
+	heavy: string;
 	/** What the door's small print calls the place it opens onto. */
-	highTechWhat: string;
+	heavyWhat: string;
 }
 
-const { title, description = SITE_DESCRIPTION, highTech, highTechWhat } = Astro.props;
+const { title, description = SITE_DESCRIPTION, heavy, heavyWhat } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const built = new Date();
 const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -45,11 +52,21 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 		<link rel="canonical" href={canonical} />
 		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
 		<style is:inline>
+			/* Side margins run from 40px on a phone to 260px on a wide
+			   screen, along a line through 180px at 1024px; top and bottom
+			   from 40px to 80px. (Lexie, 2026-10-06.) */
 			body {
-				max-width: 40em;
-				margin: 0 auto;
-				padding: 0.5em 1em 2em;
+				margin: 0;
+				padding: clamp(40px, 5.5vw, 80px) clamp(40px, 22vw - 46px, 260px);
 				line-height: 1.45;
+			}
+			/* So the padding is the whole gap, not the padding plus a
+			   paragraph's own margin. */
+			body > p:first-of-type {
+				margin-top: 0;
+			}
+			body > p:last-of-type {
+				margin-bottom: 0;
 			}
 			img {
 				max-width: 100%;
@@ -76,9 +93,10 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 			.grafix { background: #ffcc99; }
 			.ink { background: #ccccff; }
 			.music { background: #ccff99; }
-			/* Drawn pixel for pixel wherever the column fits, so the dither
-			   stays a dither instead of being smoothed back into grey. */
-			@media (min-width: 42em) {
+			/* Drawn pixel for pixel wherever the column is at least as wide as
+			   the 600px pictures (from about 907px, given the margins above),
+			   so the dither stays a dither instead of being smoothed into grey. */
+			@media (min-width: 57em) {
 				.tint img {
 					image-rendering: pixelated;
 				}
@@ -121,17 +139,18 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 		</p>
 
 		<p class="door">
-			<b><a href={highTech}>Take me to the high-tech&rarr; version</a></b>
+			<b><a href={heavy}>Take me to the (unnecessarily) graphic heavy&rarr; version</a></b>
+			<span aria-hidden="true">&nbsp;𖦹ׂ ₊˚⊹⋆</span>
 			<br />
 			<small>
-				{highTechWhat} &mdash; the 3D field of works, with lights and sound. Same works, same words,
-				a great deal more to download.
+				{heavyWhat} - the 3D field of works, with lights and sound. Same works, same words, a great
+				deal more to download.
 			</small>
 		</p>
 
 		<p>
 			[ <a href={`${LOW_TECH}#works`}>works</a> | <a href={`${LOW_TECH}#about`}>about &amp; contact</a> |{' '}
-			<a href={highTech}>high-tech&rarr;</a> ]
+			<a href={heavy}>(unnecessarily) graphic heavy&rarr;</a> ]
 		</p>
 
 		<hr />
@@ -146,7 +165,7 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 				included. No JavaScript, no web fonts, no cookies, no tracking. After{' '}
 				<a href="https://solar.lowtechmagazine.com/">Low&larr;Tech Magazine</a>.
 				<br />
-				Built from the same files as the <a href={highTech}>high-tech&rarr; version</a>, so the two are always the
+				Built from the same files as the <a href={heavy}>(unnecessarily) graphic heavy&rarr; version</a>, so the two are always the
 				same: last updated {builtOn}.
 				<br />
 				&copy; {built.getFullYear()} Lexie Yu. All rights reserved. [ <a href="#top">top</a> ]

@@ -15,9 +15,9 @@ const { tagline, title, emailLabel, email, linksLabel, links, signoff } = about.
 const { Content: AboutText } = await render(about);
 ---
 
-<LowTech title={`${SITE_TITLE} ←low-tech`} highTech="/" highTechWhat="The front page">
-	<marquee scrollamount="3">{SITE_GREETING}</marquee>
-	<p class="still">{SITE_GREETING}</p>
+<LowTech title={`${SITE_TITLE} ←low-tech`} heavy="/" heavyWhat="The front page">
+	<marquee scrollamount="3">{SITE_GREETING} <span aria-hidden="true">૮₍ ´ ꒳ `₎ა</span></marquee>
+	<p class="still">{SITE_GREETING} <span aria-hidden="true">૮₍ ´ ꒳ `₎ა</span></p>
 
 	<h2 id="works">Works <small>({ordered.length})</small></h2>
 	<p>
@@ -37,6 +37,7 @@ const { Content: AboutText } = await render(about);
 			<>
 				<h3 id={category.slug}>
 					<span class={`swatch ${category.slug}`} /> {category.name}
+					{category.slug === 'music' && <span aria-hidden="true"> ‧₊˚♪ 𝄞₊˚⊹</span>}
 				</h3>
 				<ul>
 					{works.map((work) => (
@@ -44,7 +45,7 @@ const { Content: AboutText } = await render(about);
 							<a href={workPath(work.id)}>
 								<b>{work.data.title}</b>
 							</a>{' '}
-							&mdash; <i>{work.data.date}</i>
+							<i>({work.data.date})</i>
 							<br />
 							{work.data.intro}
 						</li>
@@ -74,5 +75,7 @@ const { Content: AboutText } = await render(about);
 		}
 	</ul>
 
-	<p><i>{signoff}</i></p>
+	<p>
+		<i>{signoff}</i> <span aria-hidden="true">⋆⁺₊❅.⋆𐙚₊˚⊹♡</span>
+	</p>
 </LowTech>

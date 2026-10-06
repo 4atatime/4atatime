@@ -58,10 +58,10 @@ const readings: [string, string][] = [
 ---
 
 <LowTech
-	title={`${title} — ${SITE_TITLE} ←low-tech`}
+	title={`${title} - ${SITE_TITLE} ←low-tech`}
 	description={intro}
-	highTech={`/#work/${work.id}`}
-	highTechWhat={`“${title}” in the field`}
+	heavy={`/#work/${work.id}`}
+	heavyWhat={`“${title}” in the field`}
 >
 	<p>
 		<small>
@@ -91,7 +91,7 @@ const readings: [string, string][] = [
 		cover && (
 			<p>
 				<a href={coverColour} class={`tint ${slug}`}>
-					<img src={pictureUrl(cover)} {...ditheredSize(cover.image)} alt={`${title} — cover`} />
+					<img src={pictureUrl(cover)} {...ditheredSize(cover.image)} alt={`${title} - cover`} />
 				</a>
 				<br />
 				<small>
@@ -115,7 +115,7 @@ const readings: [string, string][] = [
 								<img
 									src={pictureUrl(plate)}
 									{...ditheredSize(plate.image)}
-									alt={plateTitle ?? `${title} — plate ${i + 1}`}
+									alt={plateTitle ?? `${title} - plate ${i + 1}`}
 									loading="lazy"
 								/>
 							</a>
@@ -124,7 +124,7 @@ const readings: [string, string][] = [
 								<b>{String(i + 1).padStart(2, '0')}.</b>{' '}
 								{plateTitle && (href ? <a href={href}>{plateTitle}</a> : <b>{plateTitle}</b>)}
 								{plateTitle && ' '}
-								{caption && <>&mdash; {caption} </>}
+								{caption && <>{plateTitle && '- '}{caption} </>}
 								{!plateTitle && href && <a href={href}>[link]</a>}{' '}
 								<a href={plateColours[i]}>[see it in colour]</a>
 							</small>

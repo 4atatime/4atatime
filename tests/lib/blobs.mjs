@@ -79,15 +79,21 @@ export async function nameAt(page, x, y) {
  *
  * `minArea` is in device pixels and sits above the largest star (about 100)
  * and below the smallest work-plus-link region.
+ *
+ * `largest` keeps only the biggest region — the field itself. Two stars can
+ * drift into each other and come to more than `minArea` together: a turn
+ * moves the sky, and on 2026-10-06 one did, 120px above a cloud whose height
+ * had not changed, and the box measured 93px -> 227px. Where the question is
+ * "how big is the field", that region is the answer and nothing else is.
  */
-export const cloudBox = (page, threshold = 60, minArea = 140) =>
-  page.evaluate(([T, MIN]) => {
+export const cloudBox = (page, threshold = 60, minArea = 140, { largest = false } = {}) =>
+  page.evaluate(([T, MIN, LARGEST]) => {
     const c = document.getElementById('graph-canvas');
     const { data, width, height } = c.getContext('2d').getImageData(0, 0, c.width, c.height);
     const dpr = window.devicePixelRatio || 1;
     const A = (x, y) => data[((y * width + x) << 2) + 3];
     const seen = new Uint8Array(width * height);
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, total = 0, parts = 0;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, total = 0, parts = 0, best = 0;
     for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
       const i = y * width + x;
       if (seen[i] || A(x, y) < T) continue;
@@ -107,6 +113,11 @@ export const cloudBox = (page, threshold = 60, minArea = 140) =>
         }
       }
       if (n < MIN) continue;
+      if (LARGEST) {
+        if (n <= best) continue;
+        best = n;
+        minX = Infinity; maxX = -Infinity; minY = Infinity; maxY = -Infinity; total = 0; parts = 0;
+      }
       parts++;
       total += n;
       if (lo < minX) minX = lo; if (hi > maxX) maxX = hi;
@@ -121,7 +132,7 @@ export const cloudBox = (page, threshold = 60, minArea = 140) =>
       cy: ((minY + maxY) / 2) / dpr,
       count: total / (dpr * dpr),
     };
-  }, [threshold, minArea]);
+  }, [threshold, minArea, largest]);
 
 /**
  * Somewhere on the canvas that is empty for the purposes of clicking: far
