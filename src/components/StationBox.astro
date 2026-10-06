@@ -6,17 +6,33 @@
 // The filter buttons write to the URL rather than to local state (see
 // ../scripts/filter.ts) so a filtered garden is a shareable link, and so the
 // same categories can be pressed from inside an open work.
-import { Image } from 'astro:assets';
+import { Image, getImage } from 'astro:assets';
 import logo from '../assets/4atatime_logo.png';
 import { ALL_CATEGORIES, CATEGORIES } from '../lib/categories';
 import { SITE_GREETING } from '../consts';
 
 const options = [ALL_CATEGORIES, ...CATEGORIES];
+
+// The mark is also the door to the low-tech mirror. Grey as ever until it is
+// pointed at or pressed, then lit in the accent: the brush drawing is used as
+// a mask over a block of --accent, so it follows the theme like everything
+// else, rather than being a second, coloured picture of itself. Same file as
+// the 240px copy the <Image> already lists, so it costs nothing extra.
+const lit = await getImage({ src: logo, width: 240 });
 ---
 
 <section class="station" aria-label="Legend">
 	<header class="head">
-		<Image class="mark" src={logo} alt="4atatime" widths={[120, 240]} sizes="120px" loading="eager" />
+		<a
+			class="mark-door"
+			href="/low-tech/"
+			data-low-tech
+			title="low-tech version"
+			style={`--mark: url(${lit.src})`}
+		>
+			<Image class="mark" src={logo} alt="4atatime — low-tech version" widths={[120, 240]} sizes="120px" loading="eager" />
+			<span class="mark-lit" aria-hidden="true"></span>
+		</a>
 		<p class="greeting">{SITE_GREETING}</p>
 	</header>
 
@@ -89,10 +105,46 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 		gap: 0.5rem;
 	}
 
+	.mark-door {
+		position: relative;
+		flex: none;
+		align-self: flex-start;
+		pointer-events: auto;
+	}
+	.mark-door:focus-visible {
+		outline: 1px solid var(--accent);
+		outline-offset: 4px;
+	}
 	.mark {
+		display: block;
 		width: 62px;
 		height: auto;
 		opacity: 0.55;
+		transition: opacity 0.2s ease;
+	}
+	.mark-lit {
+		position: absolute;
+		inset: 0;
+		background: var(--accent);
+		-webkit-mask: var(--mark) center / contain no-repeat;
+		mask: var(--mark) center / contain no-repeat;
+		opacity: 0;
+		transition: opacity 0.2s ease;
+	}
+	.mark-door:hover .mark-lit,
+	.mark-door:focus-visible .mark-lit,
+	.mark-door:active .mark-lit {
+		opacity: 1;
+	}
+	/* The grey drawing steps aside, or it would show through as a shadow
+	   under the lit one. Matched for weight with the dark-theme rule below. */
+	.mark-door:hover .mark,
+	.mark-door:focus-visible .mark,
+	.mark-door:active .mark,
+	:global([data-theme='dark']) .mark-door:hover .mark,
+	:global([data-theme='dark']) .mark-door:focus-visible .mark,
+	:global([data-theme='dark']) .mark-door:active .mark {
+		opacity: 0;
 	}
 	/* The mark is a dark brush drawing; in the dark theme it has to be lifted
 	   off the page rather than sit as a black shape on black. */
@@ -317,9 +369,11 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 			align-items: center;
 			gap: 0.6rem;
 		}
+		.mark-door {
+			align-self: center;
+		}
 		.mark {
 			width: 38px;
-			flex: none;
 		}
 		.greeting {
 			font-size: 0.7rem;
@@ -381,6 +435,8 @@ const options = [ALL_CATEGORIES, ...CATEGORIES];
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.mark,
+		.mark-lit,
 		.filter,
 		.code {
 			transition: none;

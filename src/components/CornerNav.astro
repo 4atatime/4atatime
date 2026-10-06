@@ -12,6 +12,10 @@
 // turned to mush: anything with more than three strokes closes up at this
 // size, so the gills and fins that make it *more* fish-like on paper are
 // exactly what has to go.
+//
+// Under it, the plainest possible way to the low-tech mirror: a text link,
+// underlined like the links it leads to. ../scripts/low-tech.ts points it at
+// whatever is open.
 ---
 
 <nav class="cta" aria-label="Site">
@@ -28,13 +32,34 @@
 		</span>
 		<span class="label">About &amp; Contact!</span>
 	</a>
+	<a class="low-tech" href="/low-tech/" data-low-tech>&gt;&gt; low-tech version</a>
 </nav>
 
 <style>
 	.cta {
 		display: flex;
-		align-items: stretch;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.45rem;
 		pointer-events: auto;
+	}
+
+	.low-tech {
+		font-family: var(--font-mono);
+		font-size: 0.66rem;
+		letter-spacing: 0.02em;
+		line-height: 1;
+		color: var(--muted);
+		text-underline-offset: 0.2em;
+		transition: color 0.18s ease;
+	}
+	.low-tech:hover,
+	.low-tech:focus-visible {
+		color: var(--accent);
+	}
+	.low-tech:focus-visible {
+		outline: 1px solid var(--accent);
+		outline-offset: 3px;
 	}
 
 	.marker {
@@ -147,7 +172,8 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.marker {
+		.marker,
+		.low-tech {
 			transition: none;
 		}
 		.marker:hover .ripple::before,
