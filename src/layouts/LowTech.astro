@@ -1,0 +1,157 @@
+---
+// The shell of every page in the low-tech mirror (/low-tech/): the same works
+// and words as the main site, as plain HTML. Modelled on Low←Tech Magazine's
+// solar site and the web of the early 2000s:
+//
+//   · no JavaScript, no web fonts, no cookies, nothing fetched from elsewhere —
+//     the text is set in whatever the browser's own default is;
+//   · the browser's own colours, too: blue links that turn purple once
+//     visited, grey rules, and a dark page if the visitor's system is dark
+//     (`color-scheme`) — the only "theme switch" a page needs;
+//   · in place of a logo, one typographic move, after Low←Tech Magazine's
+//     arrow: 4atatime ←low-tech, and the way back is high-tech→;
+//   · the page says what it weighs, measured off the built files by
+//     src/integrations/page-weight.mjs (in `astro dev` it says so instead).
+//
+// Deliberately not BaseHead.astro: that pulls in the main site's stylesheet
+// and four web fonts, which is most of what this version exists to leave out.
+// The little CSS there is is inline, so a page is one request plus pictures.
+import { SITE_DESCRIPTION } from '../consts';
+import { LOW_TECH } from '../lib/low-tech';
+
+interface Props {
+	title: string;
+	description?: string;
+	/** Where the "high-tech" door opens: the same work in the field, or the front page. */
+	highTech: string;
+	/** What the door's small print calls the place it opens onto. */
+	highTechWhat: string;
+}
+
+const { title, description = SITE_DESCRIPTION, highTech, highTechWhat } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const built = new Date();
+const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<meta name="color-scheme" content="light dark" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonical} />
+		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+		<style is:inline>
+			body {
+				max-width: 40em;
+				margin: 0 auto;
+				padding: 0.5em 1em 2em;
+				line-height: 1.45;
+			}
+			img {
+				max-width: 100%;
+				height: auto;
+			}
+			/* The dithered pictures are grey; the browser tints them by
+			   collection, multiplying the grey into the colour behind it. */
+			.tint {
+				display: inline-block;
+				max-width: 100%;
+				line-height: 0;
+				vertical-align: top;
+			}
+			.tint img {
+				mix-blend-mode: multiply;
+			}
+			.swatch {
+				display: inline-block;
+				width: 0.8em;
+				height: 0.8em;
+				border: 1px solid;
+			}
+			.uiux { background: #99cccc; }
+			.grafix { background: #ffcc99; }
+			.ink { background: #ccccff; }
+			.music { background: #ccff99; }
+			/* Drawn pixel for pixel wherever the column fits, so the dither
+			   stays a dither instead of being smoothed back into grey. */
+			@media (min-width: 42em) {
+				.tint img {
+					image-rendering: pixelated;
+				}
+			}
+			table {
+				border-collapse: collapse;
+			}
+			th {
+				text-align: left;
+				vertical-align: top;
+			}
+			.door {
+				border: 2px outset ButtonBorder;
+				padding: 0.4em 0.7em;
+			}
+			.still {
+				display: none;
+			}
+			@media (prefers-reduced-motion: reduce) {
+				marquee {
+					display: none;
+				}
+				.still {
+					display: block;
+				}
+			}
+			.badge {
+				display: inline-block;
+				border: 1px solid;
+				padding: 0 0.4em;
+				font: 10px/1.6 Verdana, sans-serif;
+				text-transform: uppercase;
+			}
+		</style>
+	</head>
+	<body>
+		<a id="top"></a>
+		<p>
+			<big><b><a href={LOW_TECH}>4atatime</a> &larr;low-tech</b></big>
+		</p>
+
+		<p class="door">
+			<b><a href={highTech}>Take me to the high-tech&rarr; version</a></b>
+			<br />
+			<small>
+				{highTechWhat} &mdash; the 3D field of works, with lights and sound. Same works, same words,
+				a great deal more to download.
+			</small>
+		</p>
+
+		<p>
+			[ <a href={`${LOW_TECH}#works`}>works</a> | <a href={`${LOW_TECH}#about`}>about &amp; contact</a> |{' '}
+			<a href={highTech}>high-tech&rarr;</a> ]
+		</p>
+
+		<hr />
+
+		<slot />
+
+		<hr />
+
+		<p>
+			<small>
+				This page weighs <b><!--weight-->(measured when the site is built)<!--/weight--></b>, pictures
+				included. No JavaScript, no web fonts, no cookies, no tracking. After{' '}
+				<a href="https://solar.lowtechmagazine.com/">Low&larr;Tech Magazine</a>.
+				<br />
+				Built from the same files as the <a href={highTech}>high-tech&rarr; version</a>, so the two are always the
+				same: last updated {builtOn}.
+				<br />
+				&copy; {built.getFullYear()} Lexie Yu. All rights reserved. [ <a href="#top">top</a> ]
+			</small>
+		</p>
+		<p><span class="badge">best viewed with any browser</span></p>
+	</body>
+</html>

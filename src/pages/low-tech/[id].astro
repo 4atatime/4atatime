@@ -1,0 +1,167 @@
+---
+// One work in the low-tech mirror: everything its panel on the main site
+// holds — the survey-slip readings, the cover, the write-up, every plate with
+// its title, caption and link, and the links out — as one plain page.
+//
+// The pictures are the dithered copies (../../lib/dither.ts). Each links to
+// the main site's own colour copy of the same picture — the very file the
+// panel shows, not another one — for anyone who wants to see it properly.
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import { render } from 'astro:content';
+import { SITE_TITLE } from '../../consts';
+import LowTech from '../../layouts/LowTech.astro';
+import { categoryOf } from '../../lib/categories';
+import { ditheredSize } from '../../lib/dither';
+import { HERO_MAX, PLATE_MAX, QUALITY, widthOf } from '../../lib/images';
+import { LOW_TECH, picturesOf, pictureUrl, worksByCollection, workPath, type Work } from '../../lib/low-tech';
+import { workSerial } from '../../lib/serial';
+
+export async function getStaticPaths() {
+	const { ordered } = await worksByCollection();
+	return ordered.map((work, i) => ({
+		params: { id: work.id },
+		props: { work, previous: ordered[i - 1], next: ordered[i + 1] },
+	}));
+}
+
+interface Props {
+	work: Work;
+	previous?: Work;
+	next?: Work;
+}
+
+const { work, previous, next } = Astro.props;
+const { title, section, tags, date, status, link, intro, role, location, tools, links, gallery } = work.data;
+const { Content } = await render(work);
+const category = categoryOf(section);
+const slug = category?.slug ?? '';
+const { cover, plates } = picturesOf(work);
+
+// The same options WorkDetailContent.astro gives <Image>, so Astro hands back
+// the file it already publishes for the panel rather than making another.
+async function colourCopy(image: ImageMetadata, max: number) {
+	return (await getImage({ src: image, width: Math.min(widthOf(image), max), quality: QUALITY })).src;
+}
+const coverColour = cover ? await colourCopy(cover.image, HERO_MAX) : undefined;
+const plateColours = await Promise.all(plates.map((plate) => colourCopy(plate.image, PLATE_MAX)));
+
+const readings: [string, string][] = [
+	['No.', workSerial(work.id, section, work.data.sortDate)],
+	['When', date],
+	...(role ? [['What', role] as [string, string]] : []),
+	...(location ? [['Where', location] as [string, string]] : []),
+	...(tools.length ? [['How', tools.join(', ')] as [string, string]] : []),
+	...(status ? [['Update Log', status] as [string, string]] : []),
+	['Tags', tags.join(', ')],
+];
+---
+
+<LowTech
+	title={`${title} — ${SITE_TITLE} ←low-tech`}
+	description={intro}
+	highTech={`/#work/${work.id}`}
+	highTechWhat={`“${title}” in the field`}
+>
+	<p>
+		<small>
+			<a href={LOW_TECH}>works</a> &raquo; <a href={`${LOW_TECH}#${slug}`}>{section}</a> &raquo; {title}
+		</small>
+	</p>
+
+	<h1>{title}</h1>
+	<p><i>{intro}</i></p>
+
+	<table border="1" cellpadding="4">
+		<tr>
+			<th>Collected under</th>
+			<td><span class={`swatch ${slug}`}></span> <a href={`${LOW_TECH}#${slug}`}>{section}</a></td>
+		</tr>
+		{
+			readings.map(([key, value]) => (
+				<tr>
+					<th>{key}</th>
+					<td>{value}</td>
+				</tr>
+			))
+		}
+	</table>
+
+	{
+		cover && (
+			<p>
+				<a href={coverColour} class={`tint ${slug}`}>
+					<img src={pictureUrl(cover)} {...ditheredSize(cover.image)} alt={`${title} — cover`} />
+				</a>
+				<br />
+				<small>
+					Cover. <a href={coverColour}>[see it in colour]</a>
+				</small>
+			</p>
+		)
+	}
+
+	<Content />
+
+	{
+		plates.length > 0 && (
+			<>
+				<h2>Plates <small>({plates.length})</small></h2>
+				{plates.map((plate, i) => {
+					const { title: plateTitle, caption, href } = gallery[i];
+					return (
+						<p>
+							<a href={plateColours[i]} class={`tint ${slug}`}>
+								<img
+									src={pictureUrl(plate)}
+									{...ditheredSize(plate.image)}
+									alt={plateTitle ?? `${title} — plate ${i + 1}`}
+									loading="lazy"
+								/>
+							</a>
+							<br />
+							<small>
+								<b>{String(i + 1).padStart(2, '0')}.</b>{' '}
+								{plateTitle && (href ? <a href={href}>{plateTitle}</a> : <b>{plateTitle}</b>)}
+								{plateTitle && ' '}
+								{caption && <>&mdash; {caption} </>}
+								{!plateTitle && href && <a href={href}>[link]</a>}{' '}
+								<a href={plateColours[i]}>[see it in colour]</a>
+							</small>
+						</p>
+					);
+				})}
+			</>
+		)
+	}
+
+	{
+		(link || links.length > 0) && (
+			<>
+				<h2>Elsewhere</h2>
+				<ul>
+					{link && (
+						<li>
+							<a href={link}>Source</a>
+						</li>
+					)}
+					{links.map((entry) => (
+						<li>
+							<a href={entry.href}>{entry.label}</a>
+						</li>
+					))}
+				</ul>
+			</>
+		)
+	}
+
+	<hr />
+
+	<p>
+		{previous ? <>&laquo; <a href={workPath(previous.id)}>{previous.data.title}</a></> : <>&laquo; (first)</>}
+		{' | '}
+		<a href={LOW_TECH}>all works</a>
+		{' | '}
+		{next ? <><a href={workPath(next.id)}>{next.data.title}</a> &raquo;</> : <>(last) &raquo;</>}
+	</p>
+</LowTech>

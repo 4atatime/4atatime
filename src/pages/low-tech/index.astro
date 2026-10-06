@@ -1,0 +1,78 @@
+---
+// The low-tech mirror's front page: every work, listed by collection the way
+// the main site's legend files them, then About & Contact. No pictures here —
+// a list of titles is the cheapest way there is to see everything at once.
+import { getEntry, render } from 'astro:content';
+import { SITE_GREETING, SITE_TITLE } from '../../consts';
+import LowTech from '../../layouts/LowTech.astro';
+import { worksByCollection, workPath } from '../../lib/low-tech';
+
+const { groups, ordered } = await worksByCollection();
+
+const about = await getEntry('pages', 'about');
+if (!about) throw new Error('src/content/pages/about.md is missing');
+const { tagline, title, emailLabel, email, linksLabel, links, signoff } = about.data;
+const { Content: AboutText } = await render(about);
+---
+
+<LowTech title={`${SITE_TITLE} ←low-tech`} highTech="/" highTechWhat="The front page">
+	<marquee scrollamount="3">{SITE_GREETING}</marquee>
+	<p class="still">{SITE_GREETING}</p>
+
+	<h2 id="works">Works <small>({ordered.length})</small></h2>
+	<p>
+		Collected under:{' '}
+		{
+			groups.map(({ category, works }, i) => (
+				<>
+					{i > 0 && ' · '}
+					<a href={`#${category.slug}`}>{category.name}</a> ({works.length})
+				</>
+			))
+		}
+	</p>
+
+	{
+		groups.map(({ category, works }) => (
+			<>
+				<h3 id={category.slug}>
+					<span class={`swatch ${category.slug}`} /> {category.name}
+				</h3>
+				<ul>
+					{works.map((work) => (
+						<li>
+							<a href={workPath(work.id)}>
+								<b>{work.data.title}</b>
+							</a>{' '}
+							&mdash; <i>{work.data.date}</i>
+							<br />
+							{work.data.intro}
+						</li>
+					))}
+				</ul>
+			</>
+		))
+	}
+
+	<hr />
+
+	<h2 id="about">{title}</h2>
+	<p><i>{tagline}</i></p>
+	<AboutText />
+
+	<h3>{emailLabel}</h3>
+	<p><a href={`mailto:${email}`}>{email}</a></p>
+
+	<h3>{linksLabel}</h3>
+	<ul>
+		{
+			links.map(({ label, href }) => (
+				<li>
+					<a href={href}>{label}</a>
+				</li>
+			))
+		}
+	</ul>
+
+	<p><i>{signoff}</i></p>
+</LowTech>

@@ -187,10 +187,10 @@ If a session ends without that, the work is still safe on your machine but
 npm test
 ```
 
-This drives a real browser through the site — about 153 checks across eight
+This drives a real browser through the site — about 178 checks across nine
 areas: the panel, the mobile layout, the category focus, the navigation, the
-sky. It takes a few minutes and starts its own server. At the end it prints
-either `all 8 suites passed` or which ones failed.
+sky, the low-tech mirror. It takes a few minutes and starts its own server. At
+the end it prints either `all 9 suites passed` or which ones failed.
 
 Run it before shipping any change to the graph. It has caught things that
 looked perfectly fine in the code.
@@ -322,9 +322,10 @@ replacement: a harness that can't reproduce the known failure proves nothing.
 **Don't push directly to `main`.** It's what's live. Work on `dev` and merge.
 
 **Vercel's free plan has 10 GB of Deployment Storage, and every deployment
-counts.** A deployment is a full copy of the built site, about 63 MB since
-2026-09-27 (91 MB before the 2026-09-24 slimming, 46 MB after it; the
-sharper image viewer added the difference, see below). Each CMS publish makes one. Vercel keeps the recent
+counts.** A deployment is a full copy of the built site, about 70 MB since
+2026-10-06 (91 MB before the 2026-09-24 slimming, 46 MB after it; the
+sharper image viewer took it to 63 MB, and the low-tech mirror's dithered
+pictures add 7 MB, see below). Each CMS publish makes one. Vercel keeps the recent
 ones and deletes older ones when the limit is reached, so the site stays up.
 The warning in September came from a month of heavy building, when every push
 to `main` *and* every push to `dev` made a deployment. These things keep it low
@@ -343,6 +344,13 @@ now, and each is worth keeping:
   been 26 MB, and the original files far more. Measured and compared on
   2026-09-26; the reasoning is in `WorkDetailContent.astro`. Only the viewer
   asks for these copies, so browsing a work doesn't load them.
+
+The low-tech mirror (`/low-tech/`) adds one dithered PNG per cover and plate,
+600px wide, four greys, about 44 KB each, so about 7 MB for all of them. Its
+"see it in colour" links point at files the panel already publishes, so they
+add nothing. If the build jumps by roughly the size of every colour image,
+those links stopped matching: `src/lib/images.ts` explains why both sides
+have to ask Astro for exactly the same thing.
 
 Check the size of a build with `npm run build && du -sh .vercel/output/static`.
 If it jumps, something started publishing originals again.

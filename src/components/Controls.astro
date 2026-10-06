@@ -1,9 +1,14 @@
 ---
-// The only chrome left in the top-right corner: lights (theme) and sound.
-// Both are switches with a state-reflecting icon beside them — sun/moon for
-// lights, speaker with or without waves for sound — so the purpose reads
-// without a text label. Kept in one component because they're one cluster and
-// share the switch styling.
+// The only chrome left in the top-right corner: lights (theme), sound, and
+// the low-tech version. All three are switches with an icon beside them —
+// sun/moon for lights, speaker with or without waves for sound, an old
+// monitor with a prompt on it for low-tech — so the purpose reads without a
+// text label. Kept in one component because they're one cluster and share
+// the switch styling.
+//
+// The low-tech one is a link dressed as a switch: it is always off here,
+// because being on means being on the other site (/low-tech/). It works as a
+// plain link; ../scripts/low-tech.ts slides it on before the page changes.
 //
 // Theme state is bootstrapped synchronously in BaseHead.astro to avoid a flash
 // of the wrong theme; this only wires up click-to-toggle and persistence.
@@ -55,6 +60,22 @@ const CLICK_SOUND_COUNT = 5;
 		</svg>
 		<span class="track"><span class="knob"></span></span>
 	</button>
+
+	<a
+		id="low-tech-toggle"
+		class="switch"
+		href="/low-tech/"
+		data-low-tech
+		aria-label="Low-tech version: the same works as plain HTML"
+		title="low-tech version"
+	>
+		<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+			<rect x="3" y="4" width="18" height="13" rx="2"></rect>
+			<path d="M9 20.5h6M12 17v3.5"></path>
+			<path d="M7 8.5l2.5 2-2.5 2M11.5 12.5h3.5"></path>
+		</svg>
+		<span class="track"><span class="knob"></span></span>
+	</a>
 </div>
 
 <audio id="ambient-audio" src="/audio/ambient.m4a" loop preload="none"></audio>
@@ -84,6 +105,9 @@ const CLICK_SOUND_COUNT = 5;
 	.switch:hover,
 	.switch:focus-visible {
 		color: var(--fg);
+	}
+	a.switch {
+		text-decoration: none;
 	}
 	.switch:focus-visible {
 		outline: 1px solid var(--accent);
@@ -124,11 +148,13 @@ const CLICK_SOUND_COUNT = 5;
 	/* Each switch is "on" for its own thing — lights on in the light theme,
 	   sound on when unmuted — so they're driven by different root attributes. */
 	:global([data-theme='light']) #theme-toggle .track,
-	:global([data-sound='on']) #sound-toggle .track {
+	:global([data-sound='on']) #sound-toggle .track,
+	#low-tech-toggle.on .track {
 		background: var(--accent);
 	}
 	:global([data-theme='light']) #theme-toggle .knob,
-	:global([data-sound='on']) #sound-toggle .knob {
+	:global([data-sound='on']) #sound-toggle .knob,
+	#low-tech-toggle.on .knob {
 		transform: translateX(13px);
 	}
 
@@ -259,4 +285,8 @@ const CLICK_SOUND_COUNT = 5;
 	});
 
 	applySound();
+</script>
+
+<script>
+	import '../scripts/low-tech';
 </script>

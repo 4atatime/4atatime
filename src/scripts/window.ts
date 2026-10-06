@@ -205,6 +205,10 @@ export function initWindow() {
 		// change of what's open; letting this close it first would push a
 		// pointless extra history entry between the two.
 		if (target?.closest?.('a[href^="#"]')) return;
+		// The doors to the low-tech mirror lead to whatever is open here
+		// (../scripts/low-tech.ts). Closing first would send them to its front
+		// page instead.
+		if (target?.closest?.('a[data-low-tech]')) return;
 		// The graph answers for its own canvas. Closing on pointer*down* here
 		// was what made the field unusable with a panel up: it fired on the
 		// first frame of a drag, so you could not turn or zoom the graph while

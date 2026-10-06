@@ -3,6 +3,7 @@
 import sitemap from '@astrojs/sitemap';
 import vercel from '@astrojs/vercel';
 import { defineConfig, envField, fontProviders } from 'astro/config';
+import pageWeight from './src/integrations/page-weight.mjs';
 
 // The canonical URL, the sitemap and the absolute og:image all hang off
 // `site`, so it has to be the real address rather than a placeholder. Vercel
@@ -48,6 +49,8 @@ export default defineConfig({
 		// says noindex; listing it in the sitemap as well would be telling
 		// crawlers both things at once.
 		sitemap({ filter: (page) => !/\/(admin|oauth)(\/|$)/.test(new URL(page).pathname) }),
+		// Writes each low-tech page's weight into its footer, after the build.
+		pageWeight(),
 	],
 	fonts: [
 		// Body/supporting text. Real weights used: 300 (thin) + 400 (regular),

@@ -180,6 +180,12 @@ reload (`Cmd-Shift-R`).
 Nothing is ever lost: every save is a commit, so any change can be undone from
 the repository's history on GitHub.
 
+The same publish updates the **low-tech version** at `/low-tech/` as well.
+There's nothing to do for it. It is built from the same works, in the same
+build, so the two versions are always the same. Its pictures are made
+automatically from the ones you upload (cut down to four greys, the
+Low←Tech Magazine way). Each one links to your original in colour.
+
 ---
 
 ## If something breaks

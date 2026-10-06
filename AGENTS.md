@@ -1,8 +1,9 @@
 ## What this is
 
 A single-page portfolio for Lexie Yu: a 3D force-directed graph of her works,
-drawn to a canvas, with a docked detail panel. Astro 7, deployed on Vercel,
-content edited through Decap CMS at `/admin`.
+drawn to a canvas, with a docked detail panel. Beside it, at `/low-tech/`, a
+plain-HTML mirror of the same content, built from the same files. Astro 7,
+deployed on Vercel, content edited through Decap CMS at `/admin`.
 
 If you are picking this project up cold, read `docs/coming-back.md` first —
 it covers the branch workflow, what is deliberate rather than accidental, and
@@ -42,7 +43,7 @@ So, at the end of a piece of work:
 
 ## Testing
 
-`npm test` runs eight behaviour suites (~153 checks) in a real browser. It
+`npm test` runs nine behaviour suites (~178 checks) in a real browser. It
 starts its own dev server unless given a port: `npm test -- 4321`.
 
 These are behaviour checks, not unit tests. Most of what this site does is
@@ -82,6 +83,16 @@ Manage the background server with `astro dev stop`, `astro dev status`, and `ast
   the latest deployment of every active branch, so one always sat in
   Deployment Storage (10 GB free) for nothing. Check changes locally with
   `npm run build` and `npm test` instead; delete the file to get previews back.
+- The low-tech mirror (`src/pages/low-tech/`, `src/layouts/LowTech.astro`)
+  uses browser-default fonts and colours, `<big>`, `<marquee>` and
+  `border="1"` tables on purpose: it is an early-2000s, Low←Tech Magazine-style
+  page, and it must stay free of scripts, web fonts and BaseHead.astro.
+  Its pictures are dithered at build time (`src/lib/dither.ts`), and its
+  "see it in colour" links reuse the panel's own files, which is why the
+  image sizes live in `src/lib/images.ts`. Suite 09 checks all of this.
+- The footer weight on low-tech pages reads "(measured when the site is
+  built)" in `astro dev`. `src/integrations/page-weight.mjs` fills it in
+  after a real build.
 - Depth figures in `src/scripts/graph.ts` are measured off rendered pixels,
   not computed from the constants. See the comment block there before
   changing them — the arithmetic has been misleading twice.
