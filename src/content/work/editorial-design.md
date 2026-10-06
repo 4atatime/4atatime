@@ -2,7 +2,7 @@
 title: Editorial Design
 section: Grafix
 intro: Digital editorilal collages, some made with MidJourney AI.
-date: 2023 – 2024
+date: 2023 - 2024
 sortDate: 2024-01-01
 tags:
   - Editorial
@@ -29,7 +29,7 @@ gallery:
     href: https://sifted.eu/articles/northvolt-galp-aurora-lithium-portugal
   - src: /src/assets/work/editorial-design/digital-collage-2.png
     title: "Digital Collage #2"
-    caption: '"Gossip, complaining and back-channelling — the WhatsApp groups that
+    caption: '"Gossip, complaining and back-channelling - the WhatsApp groups that
       run tech", by Mirriam Pattington'
     href: https://sifted.eu/articles/whatsapp-groups-that-run-tech
   - src: /src/assets/work/editorial-design/digital-collage-3.png

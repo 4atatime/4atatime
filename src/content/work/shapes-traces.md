@@ -2,7 +2,7 @@
 title: Shapes, Traces
 section: Ink!
 intro: "Geometrical (and non-geometrical) goods. "
-date: 2024 – ongoing
+date: 2024 - ongoing
 sortDate: 2024-01-01
 tags:
   - Tattoo

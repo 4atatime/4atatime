@@ -3,8 +3,8 @@ title: Whatodo:nxt
 section: UI/UX
 intro: "A personal experiment in code and curiosity: free obscure advice by
   softly nudging a (digital) flower."
-date: "2023"
-sortDate: 2023-01-01
+date: 2023, redesigned 2026
+sortDate: 2026-01-01
 tags:
   - Web
   - Code
@@ -18,7 +18,7 @@ location: (home)
 tools:
   - design
   - dev
-status: still some bugs to fix *procrastinating*
+status: redesigned & bug fixed, 2026
 link: https://4atatime.github.io/whatodonxt/index.html
 heroImage: /src/assets/work/whatodo-nxt/hero.png
 links:

@@ -43,7 +43,7 @@ So, at the end of a piece of work:
 
 ## Testing
 
-`npm test` runs nine behaviour suites (~178 checks) in a real browser. It
+`npm test` runs nine behaviour suites (~185 checks) in a real browser. It
 starts its own dev server unless given a port: `npm test -- 4321`.
 
 These are behaviour checks, not unit tests. Most of what this site does is
@@ -90,6 +90,12 @@ Manage the background server with `astro dev stop`, `astro dev status`, and `ast
   Its pictures are dithered at build time (`src/lib/dither.ts`), and its
   "see it in colour" links reuse the panel's own files, which is why the
   image sizes live in `src/lib/images.ts`. Suite 09 checks all of this.
+- **No long dashes (— or –) in anything a visitor can read**, on either site:
+  copy, content, alt text, labels, titles (Lexie, 2026-10-06). An aside takes
+  a spaced hyphen ( - ), a path takes `>>`, a "goes to" takes `->`; arrows
+  (→ ←) stay. Code comments are exempt. Suite 09 reads both sites for them.
+- The low-tech door back is called the "(unnecessarily) graphic heavy→
+  version". That's Lexie's name for it; don't "fix" it to "high-tech".
 - The footer weight on low-tech pages reads "(measured when the site is
   built)" in `astro dev`. `src/integrations/page-weight.mjs` fills it in
   after a real build.

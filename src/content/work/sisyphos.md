@@ -4,7 +4,7 @@ section: Grafix
 intro: '"Sisyphos" is a collective started off from a charity fundraiser event
   in Dec 2024. Since then, we have been organising various events regarding
   social work and beyond.'
-date: 2024 – ongoing
+date: 2024 - ongoing
 sortDate: 2024-12-01
 tags:
   - Collective

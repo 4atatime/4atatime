@@ -187,7 +187,7 @@ If a session ends without that, the work is still safe on your machine but
 npm test
 ```
 
-This drives a real browser through the site — about 178 checks across nine
+This drives a real browser through the site — about 185 checks across nine
 areas: the panel, the mobile layout, the category focus, the navigation, the
 sky, the low-tech mirror. It takes a few minutes and starts its own server. At
 the end it prints either `all 9 suites passed` or which ones failed.

@@ -30,7 +30,7 @@ For Musr, a social app connecting people through music tastes, I developed a com
 
 **Challenge:** Musr had promising, unique design drafts, but lacked the consistency and scalability needed for future growth.
 
-**Process:** I audited existing elements, identified inconsistencies, and collaborated with a small but strongly bonded team — designer, devs, founder, marketing — to define and document design decisions, eventually forming a component-based design system.
+**Process:** I audited existing elements, identified inconsistencies, and collaborated with a small but strongly bonded team - designer, devs, founder, marketing - to define and document design decisions, eventually forming a component-based design system.
 
 **Solution:**
 
@@ -39,4 +39,4 @@ For Musr, a social app connecting people through music tastes, I developed a com
 * Typography and colour hierarchy
 * Interaction patterns and behaviour logics
 
-The new system enabled faster implementation by developers, reduced decision fatigue for designers, and created a more coherent user experience — while providing Musr with the structured foundation needed to iterate quickly and maintain brand cohesion.
+The new system enabled faster implementation by developers, reduced decision fatigue for designers, and created a more coherent user experience - while providing Musr with the structured foundation needed to iterate quickly and maintain brand cohesion.

@@ -2,7 +2,7 @@
 title: Touch of Zen
 section: Ink!
 intro: "It's more natural to embrace my culture being physically elsewhere :) "
-date: 2024 – ongoing
+date: 2024 - ongoing
 sortDate: 2024-01-01
 tags:
   - Tattoo

@@ -15,10 +15,13 @@ export interface Category {
 	code: string;
 }
 
+// In the order the legend and the low-tech mirror list them (Lexie,
+// 2026-10-06). Nothing else depends on the order — the graph's layout only
+// ever asks whether two works share a category.
 export const CATEGORIES: Category[] = [
-	{ name: 'UI/UX', slug: 'uiux', code: 'UX' },
 	{ name: 'Grafix', slug: 'grafix', code: 'GX' },
 	{ name: 'Ink!', slug: 'ink', code: 'IK' },
+	{ name: 'UI/UX', slug: 'uiux', code: 'UX' },
 	{ name: 'mμsic', slug: 'music', code: 'MU' },
 ];
 
