@@ -6,9 +6,9 @@ email: 4atatime@proton.me
 linksLabel: Here are some links
 links:
   - label: < Portfolio/Graphic Collections, '23-'26 >
-    href: https://www.are.na/block/47352398
-  - label: < CV >
     href: https://www.are.na/block/51673518
+  - label: < CV >
+    href: https://www.are.na/block/51677206
   - label: < Instagram >
     href: https://www.instagram.com/4_atatime_/
   - label: "< Digital Archive project: Eastern Asian esoteric manuscripts>"

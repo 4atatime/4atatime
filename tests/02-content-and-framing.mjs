@@ -101,7 +101,10 @@ const tags = (await page.textContent('.tags')).trim();
 check('tags render as a comma list, not chips', tags.includes(', ') && await page.locator('.tags li').count() === 0, tags.slice(0, 40) + '…');
 check('tag count is 5-10', tags.split(',').length >= 5 && tags.split(',').length <= 10, `${tags.split(',').length} tags`);
 const labels = await page.$$eval('.reading dt', els => els.map(e => e.textContent));
-check('metadata uses the new words', JSON.stringify(labels) === JSON.stringify(['When','What','Where','How']), labels.join('/'));
+// "How" only appears when the work lists tools, and that's content, edited in
+// the CMS (Touch of Zen's were emptied on 2026-09-24). Either form is right.
+check('metadata uses the new words',
+  ['When/What/Where', 'When/What/Where/How'].includes(labels.join('/')), labels.join('/'));
 
 // --- Organic frames ------------------------------------------------------
 const radii = await page.$$eval('.plates img, .hero img, .collected-name, [data-filter] .code',
