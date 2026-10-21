@@ -8,7 +8,7 @@ links:
   - label: < Portfolio/Graphic Collections, '23-'26 >
     href: https://www.are.na/block/47352398
   - label: < CV >
-    href: https://www.are.na/block/47352596
+    href: https://www.are.na/block/51673518
   - label: < Instagram >
     href: https://www.instagram.com/4_atatime_/
   - label: "< Digital Archive project: Eastern Asian esoteric manuscripts>"

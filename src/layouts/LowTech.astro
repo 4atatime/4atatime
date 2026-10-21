@@ -53,16 +53,23 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 			/* Side margins run from 40px on a phone to 260px on a wide
 			   screen, along a line through 180px at 1024px; top and bottom
 			   from 40px to 80px. (Lexie, 2026-10-06.) */
-			/* Text from 17px on a phone to 20px on a wide screen; 16px, the
-			   browser's own, read small (Lexie, 2026-10-21). Small print
-			   comes out at 14-17px, never under the 14px floor for
-			   secondary text. Set on the body in rem, so a visitor who has
-			   raised their browser's text size still gets theirs, raised. */
+			/* Text from 17px on a phone to 19px on a wide screen; 16px, the
+			   browser's own, read small, and 20px read heavy (Lexie,
+			   2026-10-21). Small print comes out at 14-16px, never under the
+			   14px floor for secondary text. Set on the body in rem, so a
+			   visitor who has raised their browser's text size still gets
+			   theirs, raised.
+			   The browser's default face has only regular and bold, so a
+			   lighter weight is out of reach; what can go is the stroke
+			   thickening Macs add by default, which is most of the heaviness.
+			   No effect elsewhere, where there is none to take off. */
 			body {
 				margin: 0;
 				padding: clamp(40px, 5.5vw, 80px) clamp(40px, 22vw - 46px, 260px);
-				font-size: clamp(1.0625rem, 0.95rem + 0.4vw, 1.25rem);
+				font-size: clamp(1.0625rem, 0.95rem + 0.3vw, 1.1875rem);
 				line-height: 1.5;
+				-webkit-font-smoothing: antialiased;
+				-moz-osx-font-smoothing: grayscale;
 			}
 			small {
 				font-size: 0.85em;
