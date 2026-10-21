@@ -2,7 +2,18 @@
 const year = new Date().getFullYear();
 ---
 
-<footer>&copy; {year} Lexie Yu. All rights reserved.</footer>
+<footer>
+	<a class="copyleft" href="https://en.wikipedia.org/wiki/All_rights_reversed" title="Copyleft"
+		><svg viewBox="0 0 100 100" role="img" aria-label="Copyleft"
+			><circle cx="50" cy="50" r="43" fill="none" stroke="currentColor" stroke-width="12" /><path
+				d="M30 37 A24 24 0 1 1 30 63"
+				fill="none"
+				stroke="currentColor"
+				stroke-width="12"></path></svg
+		></a
+	>{' '}
+	{year} Lexie Yu. All rights reversed.
+</footer>
 
 <style>
 	/* Positioned by the bottom bar in index.astro, which keeps it on the same
@@ -18,5 +29,17 @@ const year = new Date().getFullYear();
 		footer {
 			font-size: 11px;
 		}
+	}
+	/* The copyleft mark stands where the © would, in the same muted colour;
+	   it links to Wikipedia's "All rights reversed" (Lexie, 2026-10-21). The
+	   bar lets clicks through to the graph, so the link takes its own back. */
+	.copyleft {
+		color: inherit;
+		pointer-events: auto;
+	}
+	.copyleft svg {
+		width: 0.95em;
+		height: 0.95em;
+		vertical-align: -0.12em;
 	}
 </style>
