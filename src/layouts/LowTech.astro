@@ -31,11 +31,9 @@ interface Props {
 	description?: string;
 	/** Where the door to the graphic-heavy version opens: the same work in the field, or the front page. */
 	heavy: string;
-	/** What the door's small print calls the place it opens onto. */
-	heavyWhat: string;
 }
 
-const { title, description = SITE_DESCRIPTION, heavy, heavyWhat } = Astro.props;
+const { title, description = SITE_DESCRIPTION, heavy } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const built = new Date();
 const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -55,10 +53,25 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 			/* Side margins run from 40px on a phone to 260px on a wide
 			   screen, along a line through 180px at 1024px; top and bottom
 			   from 40px to 80px. (Lexie, 2026-10-06.) */
+			/* Text from 17px on a phone to 20px on a wide screen; 16px, the
+			   browser's own, read small (Lexie, 2026-10-21). Small print
+			   comes out at 14-17px, never under the 14px floor for
+			   secondary text. Set on the body in rem, so a visitor who has
+			   raised their browser's text size still gets theirs, raised. */
 			body {
 				margin: 0;
 				padding: clamp(40px, 5.5vw, 80px) clamp(40px, 22vw - 46px, 260px);
-				line-height: 1.45;
+				font-size: clamp(1.0625rem, 0.95rem + 0.4vw, 1.25rem);
+				line-height: 1.5;
+			}
+			small {
+				font-size: 0.85em;
+			}
+			/* A paragraph of small print spaced by its own size, not by the
+			   larger text around it, which left it double-spaced. */
+			.door small,
+			p > small:only-child {
+				display: block;
 			}
 			/* So the padding is the whole gap, not the padding plus a
 			   paragraph's own margin. */
@@ -108,9 +121,24 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 				text-align: left;
 				vertical-align: top;
 			}
+			/* The door to the main site is the one thing on the page that
+			   should look pressable: a raised, early-2000s button, its link
+			   set large (Lexie, 2026-10-21). */
 			.door {
-				border: 2px outset ButtonBorder;
-				padding: 0.4em 0.7em;
+				border: 3px outset ButtonBorder;
+				padding: 0.7em 0.9em;
+			}
+			.door big {
+				font-size: 1.3em;
+				line-height: 1.3;
+			}
+			.copyleft {
+				text-decoration: none;
+			}
+			.copyleft svg {
+				width: 0.9em;
+				height: 0.9em;
+				vertical-align: -0.1em;
 			}
 			.still {
 				display: none;
@@ -127,7 +155,7 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 				display: inline-block;
 				border: 1px solid;
 				padding: 0 0.4em;
-				font: 10px/1.6 Verdana, sans-serif;
+				font: 12px/1.6 Verdana, sans-serif;
 				text-transform: uppercase;
 			}
 		</style>
@@ -139,12 +167,12 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 		</p>
 
 		<p class="door">
-			<b><a href={heavy}>Take me to the (unnecessarily) graphic heavy&rarr; version</a></b>
+			<big><b><a href={heavy}>Take me to the (unnecessarily) graphic heavy&rarr; version</a></b></big>
 			<span aria-hidden="true">&nbsp;𖦹ׂ ₊˚⊹⋆</span>
 			<br />
 			<small>
-				{heavyWhat} - the 3D field of works, with lights and sound. Same works, same words, a great
-				deal more to download.
+				Exactly the same content as here but fun and cute graphview playground, a little heavier on your
+				device (and the planet, although just a little).
 			</small>
 		</p>
 
@@ -168,7 +196,16 @@ const builtOn = built.toLocaleDateString('en-GB', { day: 'numeric', month: 'long
 				Built from the same files as the <a href={heavy}>(unnecessarily) graphic heavy&rarr; version</a>, so the two are always the
 				same: last updated {builtOn}.
 				<br />
-				&copy; {built.getFullYear()} Lexie Yu. All rights reserved. [ <a href="#top">top</a> ]
+				<a class="copyleft" href="https://en.wikipedia.org/wiki/All_rights_reversed" title="Copyleft"
+					><svg viewBox="0 0 100 100" role="img" aria-label="Copyleft"
+						><circle cx="50" cy="50" r="43" fill="none" stroke="currentColor" stroke-width="12" /><path
+							d="M30 37 A24 24 0 1 1 30 63"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="12"></path></svg
+					></a
+				>{' '}
+				{built.getFullYear()} Lexie Yu. All rights reversed. [ <a href="#top">top</a> ]
 			</small>
 		</p>
 		<p><span class="badge">best viewed with any browser</span></p>
